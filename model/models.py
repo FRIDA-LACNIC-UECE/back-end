@@ -97,8 +97,7 @@ class Database(db.Model, UserMixin):
     password = db.Column(db.String(200), nullable=False)
     ssh = db.Column(db.String(500))
 
-    def __init__(self, id, id_user, id_db_type, name, host, user, port, password, ssh):
-        self.id = id
+    def __init__(self, id_user, id_db_type, name, host, user, port, password, ssh):
         self.id_user = id_user
         self.id_db_type = id_db_type
         self.name = name
