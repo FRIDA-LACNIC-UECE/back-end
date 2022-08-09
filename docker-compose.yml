@@ -1,0 +1,8 @@
+services:
+  agent:
+    build: "."
+    image: frida-agent
+    container_name: frida-agent-container
+    ports:
+      - "5000:5000"
+    restart: always
