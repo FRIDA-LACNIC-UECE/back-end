@@ -279,5 +279,46 @@ class ClientSchema(ma.Schema):
 client_share_schema = ClientSchema()
 clients_share_schema = ClientSchema(many=True)
 
+
+class Client2(db.Model, UserMixin):
+    __tablename__ = 'client2'
+
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    _0 = db.Column(db.Integer)
+    _1 = db.Column(db.Integer)
+    _2 = db.Column(db.Integer)
+    _3 = db.Column(db.Integer)
+    _4 = db.Column(db.Integer)
+    _5 = db.Column(db.Integer)
+    _6 = db.Column(db.Integer)
+    _7 = db.Column(db.Integer)
+    _8 = db.Column(db.Integer)
+    _9 = db.Column(db.Integer)
+
+    def __init__(self, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9):
+        self._0 = _0
+        self._1 = _1
+        self._2 = _2
+        self._3 = _3
+        self._4 = _4
+        self._5 = _5
+        self._6 = _6
+        self._7 = _7
+        self._8 = _8
+        self._9 = _9
+
+    def __repr__(self):
+        return f'<Client : {self._0}>'
+
+
+class Client2Schema(ma.Schema):
+    class Meta:
+        fields = ('id', '_0', '_1', '_2', '_3',
+                  '_4', '_5', '_6', '_7', '_8', '_9')
+
+
+client2_share_schema = ClientSchema()
+clients2_share_schema = ClientSchema(many=True)
+
 # db.create_all()
 # db.session.commit()

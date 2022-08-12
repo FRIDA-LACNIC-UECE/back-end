@@ -3,16 +3,18 @@ import datetime
 import jwt
 from flask import jsonify, request
 from flask_migrate import Migrate
+from sqlalchemy_utils import database_exists
+from sqlalchemy import create_engine, exc
 
 from controller import app, db
 from service.authenticate import jwt_required
-from model.models import (AppMeta, Client, MainDB, User, Database, ValidDatabase, appmeta_share_schema,
+from model.models import (AppMeta, Client, Client2, MainDB, User, Database, ValidDatabase, appmeta_share_schema,
                           appmetas_share_schema, maindb_share_schema,
                           maindbs_share_schema, user_share_schema,
-                          users_share_schema, clients_share_schema,
+                          users_share_schema, clients_share_schema, clients2_share_schema,
                           database_share_schema, databases_share_schema,
                           valid_database_share_schema, valid_databases_share_schema)
-from service.service import anonimization, copy_database_fc, create_model
+from service.service import anonimization, copy_database_fc, create_model, csv_to_sql
 
 import csv
 import pandas as pd
@@ -50,11 +52,28 @@ def test_anon():
     ]
 
     result = clients_share_schema.dump(
-        Client.query.limit(2).all()
+        Client.query.limit(1000).all()
     )
 
     df = pd.DataFrame(data=result, columns=columns).astype(int)
     df2 = pd.DataFrame(data=anonimization(df), columns=columns)
+
+    # Create engine to connect with DB
+    try:
+        engine = create_engine(
+            'mysql://root:Admin538*@localhost:3306/public')
+    except:
+        print("Can't create 'engine")
+
+    # Standart method of Pandas to deliver data from DataFrame to PastgresQL
+    try:
+        with engine.begin() as connection:
+            df2.to_sql('client2', con=connection,
+                       index_label='id', if_exists='replace')
+            print('Done, ok!')
+    except:
+        print('Something went wrong!')
+
     return jsonify(before=df.values.tolist(), after=df2.values.tolist())
 
 
@@ -77,7 +96,7 @@ def copy_database():
     create_model(dest_db_path, dest_table, dest_columns)
 
     return jsonify({
-        'message': 'Banco de dados copiado com sucesso!'
+        'message': 'Database copied successfully!'
     })
 
 
@@ -92,7 +111,7 @@ def register():
 
     if user:
         return jsonify({
-            'error': 'Usuário já registrado, tente novamente!'
+            'error': 'User already registered, please try again!'
         }), 409
 
     user = User(name, email, pwd, is_admin)
@@ -100,7 +119,7 @@ def register():
     db.session.commit()
 
     return jsonify({
-        'message': 'Usuário registrado com sucesso!'
+        'message': 'User registered successfully!'
     })
 
 
@@ -113,7 +132,7 @@ def login():
 
     if not user or not user.verify_password(pwd):
         return jsonify({
-            "error": "Dados incorretos, tente novamente!"
+            "error": "Incorrect data, please try again!"
         }), 403
 
     payload = {
@@ -124,7 +143,7 @@ def login():
     token = jwt.encode(payload, app.config['SECRET_KEY'])
 
     return jsonify({
-        'message': 'Login efetuado com sucesso!',
+        'message': 'Logged successfully!',
         'is_admin': user.is_admin,
         'token': token
     })
@@ -230,7 +249,7 @@ def deleteUser(current_user):
 
     if not user:
         return jsonify({
-            'error': 'Usuário não existe, tente novamente!'
+            'error': 'User does not exist, please try again!'
         }), 409
 
     db.session.delete(user)
@@ -241,9 +260,9 @@ def deleteUser(current_user):
     )
 
     if not result:
-        return jsonify({'message': 'Usuário deletado com sucesso!'})
+        return jsonify({'message': 'User deleted successfully!'})
     else:
-        return jsonify({'error': 'Não foi possível deletar usuário, tente novamente!'})
+        return jsonify({'error': 'Unable to delete user, please try again!'})
 
 
 @ app.route('/protected', methods=['GET'])
@@ -310,6 +329,39 @@ def deencrypt_data(current_user):
     return jsonify(MainDB=result, AppMeta=result2)
 
 
+@app.route('/test_connection', methods=['POST'])
+@jwt_required
+def test_connection(current_user):
+    try:
+        db = "{}://{}:{}@{}:{}/{}".format(request.json['type'].lower(), request.json['user'],
+                                          request.json['password'], request.json['host'], request.json['port'], request.json['name'])
+        engine = create_engine(db)
+        if database_exists(engine.url):
+            return jsonify({
+                'message': 'Connection Successful!'
+            })
+    except:
+        return jsonify({
+            'error': 'Cannot check if database exists!'
+        }), 409
+
+
+@ app.route('/getDatabase', methods=['GET'])
+def getDatabase():
+    result = clients_share_schema.dump(
+        Client.query.limit(1000).all()
+    )
+    return jsonify(result)
+
+
+@ app.route('/getDatabase2', methods=['GET'])
+def getDatabase2():
+    result = clients2_share_schema.dump(
+        Client2.query.limit(1000).all()
+    )
+    return jsonify(result)
+
+
 '''
 @app.route('/logout')
 def logout():
@@ -318,6 +370,6 @@ def logout():
  '''
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0",port=5000,debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
 
 '''ssl_context=('ca/cert.pem', 'ca/key.pem')'''
