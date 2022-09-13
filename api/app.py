@@ -1,6 +1,7 @@
 import datetime
 
 import jwt
+import pandas as pd
 from flask import jsonify, request
 from flask_migrate import Migrate
 from sqlalchemy_utils import database_exists
@@ -14,10 +15,9 @@ from model.models import (AppMeta, Client, Client2, MainDB, User, Database, Vali
                           users_share_schema, clients_share_schema, clients2_share_schema,
                           database_share_schema, databases_share_schema,
                           valid_database_share_schema, valid_databases_share_schema)
-from service.service import anonimization, copy_database_fc, create_model, csv_to_sql
 
-import csv
-import pandas as pd
+from service import SSE, service
+
 
 Migrate(app, db)
 
@@ -56,7 +56,7 @@ def test_anon():
     )
 
     df = pd.DataFrame(data=result, columns=columns).astype(int)
-    df2 = pd.DataFrame(data=anonimization(df), columns=columns)
+    df2 = pd.DataFrame(data=service.anonimization(df), columns=columns)
 
     # Create engine to connect with DB
     try:
@@ -91,13 +91,79 @@ def copy_database():
     dest_table = dest_db['table']
     dest_columns = dest_db['columns']
 
-    copy_database_fc(src_db_path, dest_db_path,
+    service.copy_database_fc(src_db_path, dest_db_path,
                      src_table, dest_columns, dest_table)
-    create_model(dest_db_path, dest_table, dest_columns)
+    service.create_model(dest_db_path, dest_table, dest_columns)
 
     return jsonify({
         'message': 'Database copied successfully!'
     })
+
+
+@ app.route('/anonimization_data2', methods=['GET'])
+def anonimization_data2():
+
+    src_db_client = request.json['src_db_client']
+
+    src_db_client_path = "{}://{}:{}@{}:{}/{}".format(src_db_client['type'], src_db_client['user'],
+                                               src_db_client['password'], src_db_client['ip'], src_db_client['port'], src_db_client['name'])
+
+    src_table = src_db_client['table']
+
+    columns_to_anonimization = src_db_client['columns']
+
+    service.anonimization_data(src_db_client_path, src_table, columns_to_anonimization)
+
+    return jsonify({
+        'message': 'Dados anonimizado com sucesso!'
+    })
+
+
+@ app.route('/encrypt_data2', methods=['GET'])
+def encrypt_data2():
+
+    src_db_client = request.json['src_db_client']
+
+    src_db_client_path = "{}://{}:{}@{}:{}/{}".format(
+        src_db_client['type'], src_db_client['user'], src_db_client['password'], 
+        src_db_client['ip'], src_db_client['port'], src_db_client['name']
+    )
+
+    src_table = src_db_client['table']
+
+    src_db_dest = request.json['src_db_cloud']
+
+    src_db_dest_path = "{}://{}:{}@{}:{}/{}".format(
+        src_db_dest['type'], src_db_dest['user'], src_db_dest['password'], 
+        src_db_dest['ip'], src_db_dest['port'], src_db_dest['name']
+    )
+
+    SSE.encrypt_data(src_db_client_path, src_db_dest_path, src_table)
+
+    return jsonify({
+        'message': 'Banco de dados encriptografado com sucesso!'
+    })
+
+
+@ app.route('/include_column_hash', methods=['GET'])
+def include_column_hash():
+
+    src_db_cloud = request.json['src_db_cloud']
+    src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
+                                               src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
+
+    src_table = src_db_cloud['table']
+
+    src_db_user = request.json['src_db_user']
+    src_db_user_path = "{}://{}:{}@{}:{}/{}".format(src_db_user['type'], src_db_user['user'],
+                                               src_db_user['password'], src_db_user['ip'], src_db_user['port'], src_db_user['name'])
+
+    SSE.include_column_hash(src_db_cloud_path, src_db_user_path, src_table)
+
+    return jsonify({
+        'message': 'Incluido coluna hash com sucesso!'
+    })
+
 
 
 @ app.route('/register', methods=['POST'])

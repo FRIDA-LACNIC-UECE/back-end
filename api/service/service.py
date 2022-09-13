@@ -116,6 +116,83 @@ def copy_database_fc(src_db_path, dest_db_path, src_table, dest_columns, dest_ta
         print(e)
 
 
+def anonimization_data(src_db_client_path, src_table, columns_to_anonimization):
+
+    # create engine, reflect existing columns, and create table object for oldTable
+    # change this for your source database
+    srcEngineClient = create_engine(src_db_client_path)
+    SourceSessionClient = sessionmaker(srcEngineClient)
+    srcEngineClient._metadata = MetaData(bind=srcEngineClient)
+    srcEngineClient._metadata.reflect(srcEngineClient)  # get columns from existing table
+    srcEngineClient._metadata.tables[src_table].columns = [
+        i for i in srcEngineClient._metadata.tables[src_table].columns if (i.name in columns_to_anonimization)]
+    srcTableClient = Table(src_table, srcEngineClient._metadata)
+
+    sourceSessionClient = SourceSessionClient()
+    
+    query_client = sourceSessionClient.query(srcTableClient).all()
+    #query_user = sourceSessionUser.query(srcTableUser).all()
+
+    result = pd.DataFrame(data=query_client, columns=columns_to_anonimization)
+
+    save_id = result['id']
+    
+    print(result)
+
+    result = result.drop('id', axis=1)
+
+    columns_to_anonimization.remove('id')
+
+    result_anomization = result[columns_to_anonimization].astype('int')
+
+    result_anomization = result_anomization.to_numpy()
+
+    result_anomization = anonimization(result_anomization)
+    
+    result[columns_to_anonimization] = pd.DataFrame(data=result_anomization, columns=columns_to_anonimization)
+
+    result.index = save_id
+
+    #result_user = pd.DataFrame(data=query_user, columns=['id', 'line_hash'])
+    #result['line_hash'] = result_user['line_hash']
+
+    print(result)
+
+    dictionary_update_data = result.to_dict(orient='records')
+
+    first_line = sourceSessionClient.query(srcTableClient).first()
+    id = first_line.id
+
+    print(first_line)
+
+    '''query = "ALTER TABLE " + str(destTable) + " ADD line_hash TEXT"
+    srcEngineClient.execute(query)
+    columns_to_anonimization.append("line_hash")
+    print("Add line_hash")'''
+
+    sourceSessionClient.commit()
+    sourceSessionClient.close()
+
+    for row_update in dictionary_update_data:
+        print(row_update)
+        sourceSessionClient.query(srcTableClient).\
+        filter(srcTableClient.c[0] == id).\
+        update(row_update)
+        id += 1
+
+    sourceSessionClient.commit()
+
+    '''try:
+        if not destTable.exists():
+            destTable.create(checkfirst=True)
+        destSession.execute('DELETE FROM {}'.format(dest_table))
+        destSession.commit()
+        with destEngine.begin() as connection:
+            result.to_sql(dest_table, con=connection, if_exists='replace')
+    except Exception as e:
+        print(e)'''
+
+
 def anonimization(data):
     # calculate the mean of each column
     mean = np.array(np.mean(data, axis=0).T)
