@@ -165,6 +165,43 @@ def include_column_hash():
     })
 
 
+@ app.route('/line_by_hash', methods=['GET'])
+def line_by_hash():
+
+    src_db_cloud = request.json['src_db_cloud']
+    src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
+                                               src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
+    
+    table_name = src_db_cloud["table"]
+
+    hash = request.json['line_hash']
+
+    row_found = SSE.line_by_hash(src_db_cloud_path, table_name, hash)
+
+    return jsonify({
+        'message': 'Pesquisa por hash concluída com sucesso!',
+        'row_found': row_found
+    })
+
+
+@ app.route('/line_by_id', methods=['GET'])
+def line_by_id():
+
+    src_db_cloud = request.json['src_db_cloud']
+    src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
+                                               src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
+    
+    table_name = src_db_cloud["table"]
+
+    id = request.json['id']
+
+    row_found = SSE.line_by_id(src_db_cloud_path, table_name, id)
+
+    return jsonify({
+        'message': 'Pesquisa por hash concluída com sucesso!',
+        'row_found': row_found
+    })
+
 
 @ app.route('/register', methods=['POST'])
 def register():
