@@ -1,9 +1,13 @@
 import base64
+import imp
 from multiprocessing.dummy import connection
 
 import rsa
+import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine, MetaData, Table, select
 from sqlalchemy.orm import Session
+
 
 
 def generateKeys():
@@ -50,12 +54,13 @@ def encrypt_list(data_list, key):
     encrypted_list = []
 
     for data in data_list:
+        data = str(data)
         encrypted_list.append(encrypt(data, key))
 
     return encrypted_list
 
 
-def encrypt_data(src_original_db_path, src_dest_db_path, src_table, columns_list):
+def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_list):
 
     privateKey, publicKey = loadKeys()
 
@@ -71,28 +76,40 @@ def encrypt_data(src_original_db_path, src_dest_db_path, src_table, columns_list
         i for i in engine_original_db._metadata.tables[src_table].columns if (i.name in columns_list)]
     table_original_db = Table(src_table, engine_original_db._metadata)
 
+    # Adding id on columns list
+    columns_list.insert(0, "id")
+
+    # Creating connection with dest database
+    connection_dest_db = create_engine(src_dest_db_path).connect()
+
     size = 1000
     statement = select(table_original_db)
     results_proxy = session_original_db.execute(statement) # Proxy to get data on batch
     results = results_proxy.fetchmany(size) # Getting data
 
-    columns_list.insert(0, "id")
-
     id = 0
 
     while results:
+        
+        from_db = []
+
         for result in results:
-            data_list = str(list(result))
-            print(data_list)
+            data_list = list(result)
 
             encrypted_list = encrypt_list(data_list, publicKey)
             encrypted_list.insert(0, id)
 
-            encrypted_dict = [{key: value} for (key, value) in zip(columns_list, encrypted_list)]
-            id += 1
-            print(encrypted_dict)
-            print("\n\n")
+            from_db.append(encrypted_list)
 
+            id += 1
+
+        encrypted_dataframe = pd.DataFrame(from_db, columns=columns_list)
+        print(encrypted_dataframe)
+
+        encrypted_dataframe['line_hash'] = [None] * len(encrypted_dataframe)    
+ 
+        encrypted_dataframe.to_sql(src_table, connection_dest_db, if_exists='replace', index=False)
+   
         results = results_proxy.fetchmany(size) # Getting data
 
 

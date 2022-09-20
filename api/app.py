@@ -119,8 +119,8 @@ def anonimization_data2():
     })
 
 
-@ app.route('/encrypt_data2', methods=['GET'])
-def encrypt_data2():
+@ app.route('/encrypt_database', methods=['GET'])
+def encrypt_database():
 
     src_db_client = request.json['src_db_client']
 
@@ -140,8 +140,7 @@ def encrypt_data2():
         src_db_dest['ip'], src_db_dest['port'], src_db_dest['name']
     )
 
-    #SSE.encrypt_data(src_db_client_path, src_db_dest_path, src_table)
-    RSA.encrypt_data(src_db_client_path, src_db_dest_path, src_table, columns_list)
+    RSA.encrypt_database(src_db_client_path, src_db_dest_path, src_table, columns_list)
 
     return jsonify({
         'message': 'Banco de dados encriptografado com sucesso!'
