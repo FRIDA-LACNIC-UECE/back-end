@@ -16,7 +16,7 @@ from model.models import (AppMeta, Client, Client2, MainDB, User, Database, Vali
                           database_share_schema, databases_share_schema,
                           valid_database_share_schema, valid_databases_share_schema)
 
-from service import SSE, service
+from service import SSE, service, RSA
 
 
 Migrate(app, db)
@@ -131,6 +131,8 @@ def encrypt_data2():
 
     src_table = src_db_client['table']
 
+    columns_list = src_db_client["columns"]
+
     src_db_dest = request.json['src_db_cloud']
 
     src_db_dest_path = "{}://{}:{}@{}:{}/{}".format(
@@ -138,7 +140,8 @@ def encrypt_data2():
         src_db_dest['ip'], src_db_dest['port'], src_db_dest['name']
     )
 
-    SSE.encrypt_data(src_db_client_path, src_db_dest_path, src_table)
+    #SSE.encrypt_data(src_db_client_path, src_db_dest_path, src_table)
+    RSA.encrypt_data(src_db_client_path, src_db_dest_path, src_table, columns_list)
 
     return jsonify({
         'message': 'Banco de dados encriptografado com sucesso!'
