@@ -196,7 +196,7 @@ def line_by_hash(src_db_cloud_path, src_table, hash):
     connectionCloud= srcEngineCloud.connect()
 
     # Adding "_index" into table name of cloud database
-    cloud_table = src_table + "_index"
+    cloud_table = src_table
 
     # Getting columns names of client database
     result = connectionCloud.execute(f"SELECT * FROM {cloud_table}")

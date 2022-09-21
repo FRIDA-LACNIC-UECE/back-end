@@ -140,7 +140,9 @@ def encrypt_database():
         src_db_dest['ip'], src_db_dest['port'], src_db_dest['name']
     )
 
-    RSA.encrypt_database(src_db_client_path, src_db_dest_path, src_table, columns_list)
+    size_batch = 1000
+
+    RSA.encrypt_database(src_db_client_path, src_db_dest_path, src_table, columns_list, size_batch)
 
     return jsonify({
         'message': 'Banco de dados encriptografado com sucesso!'

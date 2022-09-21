@@ -1,6 +1,7 @@
 import base64
 import imp
 from multiprocessing.dummy import connection
+import re
 
 import rsa
 import pandas as pd
@@ -60,7 +61,7 @@ def encrypt_list(data_list, key):
     return encrypted_list
 
 
-def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_list):
+def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_list, size_batch):
 
     privateKey, publicKey = loadKeys()
 
@@ -68,7 +69,13 @@ def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_
     engine_original_db = create_engine(src_original_db_path)
     session_original_db = Session(engine_original_db)
 
-    # create engine, reflect existing columns, and create table object for oldTable
+    # Getting columns name
+    data_columns = engine_original_db.execute(f"SELECT * FROM {src_table} LIMIT 1")
+    columns_list = list(data_columns.keys())
+
+    print(columns_list)
+
+    # Create engine, reflect existing columns, and create table object for oldTable
     # change this for your source database
     engine_original_db._metadata = MetaData(bind=engine_original_db)
     engine_original_db._metadata.reflect(engine_original_db)  # get columns from existing table
@@ -76,41 +83,100 @@ def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_
         i for i in engine_original_db._metadata.tables[src_table].columns if (i.name in columns_list)]
     table_original_db = Table(src_table, engine_original_db._metadata)
 
-    # Adding id on columns list
-    columns_list.insert(0, "id")
-
     # Creating connection with dest database
     connection_dest_db = create_engine(src_dest_db_path).connect()
 
-    size = 1000
-    statement = select(table_original_db)
-    results_proxy = session_original_db.execute(statement) # Proxy to get data on batch
-    results = results_proxy.fetchmany(size) # Getting data
+    # Check if id is a database column
+    if "id" in columns_list:
+        # Create engine, reflect existing columns, and create table object for oldTable
+        # change this for your source database
+        engine_original_db._metadata = MetaData(bind=engine_original_db)
+        engine_original_db._metadata.reflect(engine_original_db)  # get columns from existing table
+        engine_original_db._metadata.tables[src_table].columns = [
+            i for i in engine_original_db._metadata.tables[src_table].columns if (i.name in columns_list)]
+        table_original_db = Table(src_table, engine_original_db._metadata)
 
-    id = 0
+        statement = select(table_original_db)
+        results_proxy = session_original_db.execute(statement) # Proxy to get data on batch
+        results = results_proxy.fetchmany(size_batch) # Getting data
 
-    while results:
-        
-        from_db = []
+        # Getting index of column id
+        index_id = columns_list.index('id')
 
-        for result in results:
-            data_list = list(result)
+        while results:
+            
+            from_db = []
 
-            encrypted_list = encrypt_list(data_list, publicKey)
-            encrypted_list.insert(0, id)
+            for result in results:
+                # Transform result from tuple to list
+                #data_list = list(result)
 
-            from_db.append(encrypted_list)
+                # Remove id into data_list
+                #del columns_list[index_id]
 
-            id += 1
+                #encrypted_list = encrypt_list(data_list, publicKey)
 
-        encrypted_dataframe = pd.DataFrame(from_db, columns=columns_list)
-        print(encrypted_dataframe)
+                from_db.append(list(result))
 
-        encrypted_dataframe['line_hash'] = [None] * len(encrypted_dataframe)    
- 
-        encrypted_dataframe.to_sql(src_table, connection_dest_db, if_exists='replace', index=False)
-   
-        results = results_proxy.fetchmany(size) # Getting data
+
+            # Create dataframe with data original database
+            dataframe_db = pd.DataFrame(from_db, columns=columns_list)
+
+            # Create name_columns without id
+            names_columns = columns_list.copy()
+            names_columns.remove('id')
+
+            # Encrypt each column
+            for column in names_columns:
+                dataframe_db[column] = encrypt_list(list(dataframe_db[column]), publicKey)
+
+            # Add column hash
+            dataframe_db['line_hash'] = [None] * len(dataframe_db)    
+
+            # Send data to database
+            dataframe_db.to_sql(src_table, connection_dest_db, if_exists='append', index=False)
+    
+            results = results_proxy.fetchmany(size_batch) # Getting next data
+    else:
+        # Adding id on columns list
+        columns_list.insert(0, "id")
+
+        # Create engine, reflect existing columns, and create table object for oldTable
+        # change this for your source database
+        engine_original_db._metadata = MetaData(bind=engine_original_db)
+        engine_original_db._metadata.reflect(engine_original_db)  # get columns from existing table
+        engine_original_db._metadata.tables[src_table].columns = [
+            i for i in engine_original_db._metadata.tables[src_table].columns if (i.name in columns_list)]
+        table_original_db = Table(src_table, engine_original_db._metadata)
+
+        statement = select(table_original_db)
+        results_proxy = session_original_db.execute(statement) # Proxy to get data on batch
+        results = results_proxy.fetchmany(size_batch) # Getting data
+
+        id = 0
+
+        while results:
+            
+            from_db = []
+
+            for result in results:
+                data_list = list(result)
+
+                encrypted_list = encrypt_list(data_list, publicKey)
+                encrypted_list.insert(0, id)
+
+                from_db.append(encrypted_list)
+
+                id += 1
+
+            encrypted_dataframe = pd.DataFrame(from_db, columns=columns_list)
+            print(encrypted_dataframe)
+
+            encrypted_dataframe['line_hash'] = [None] * len(encrypted_dataframe)    
+    
+            encrypted_dataframe.to_sql(src_table, connection_dest_db, if_exists='append', index=False)
+    
+            results = results_proxy.fetchmany(size_batch) # Getting data
 
 
 if __name__ == "__main__":
