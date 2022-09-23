@@ -1,6 +1,5 @@
 import datetime
 
-import jwt
 import pandas as pd
 from flask import jsonify, request
 from flask_migrate import Migrate
@@ -10,15 +9,15 @@ from sqlalchemy import create_engine, exc
 from controller import app, db
 from service.authenticate import jwt_required
 
-from model.database_model import Database, DatabaseSchema, database_share_schema, databases_share_schema
 from model.valid_database_model import ValidDatabase, ValidDatabaseSchema, valid_database_share_schema, valid_databases_share_schema
 from model.user_model import User, UserSchema, user_share_schema, users_share_schema
-
 from model.models import (AppMeta, Client, Client2, MainDB, appmeta_share_schema,
                           appmetas_share_schema, maindb_share_schema,
                           maindbs_share_schema, clients_share_schema, clients2_share_schema)
 
-from service import SSE, service, RSA
+from service import rsa_service, service, sse_service
+
+from controller import user_database, database_controller, valid_database_controller
 
 
 Migrate(app, db)
@@ -144,248 +143,11 @@ def encrypt_database():
 
     size_batch = 1000
 
-    RSA.encrypt_database(src_db_client_path, src_db_dest_path, src_table, columns_list, size_batch)
+    rsa_service.encrypt_database(src_db_client_path, src_db_dest_path, src_table, columns_list, size_batch)
 
     return jsonify({
         'message': 'Banco de dados encriptografado com sucesso!'
     })
-
-
-@ app.route('/include_column_hash', methods=['GET'])
-def include_column_hash():
-
-    src_db_cloud = request.json['src_db_cloud']
-    src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
-                                               src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
-
-    src_table = src_db_cloud['table']
-
-    src_db_user = request.json['src_db_user']
-    src_db_user_path = "{}://{}:{}@{}:{}/{}".format(src_db_user['type'], src_db_user['user'],
-                                               src_db_user['password'], src_db_user['ip'], src_db_user['port'], src_db_user['name'])
-
-    SSE.include_column_hash(src_db_cloud_path, src_db_user_path, src_table)
-
-    return jsonify({
-        'message': 'Incluido coluna hash com sucesso!'
-    })
-
-
-@ app.route('/line_by_hash', methods=['GET'])
-def line_by_hash():
-
-    src_db_cloud = request.json['src_db_cloud']
-    src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
-                                               src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
-    
-    table_name = src_db_cloud["table"]
-
-    hash = request.json['line_hash']
-
-    row_found = SSE.line_by_hash(src_db_cloud_path, table_name, hash)
-
-    return jsonify({
-        'message': 'Pesquisa por hash concluída com sucesso!',
-        'row_found': row_found
-    })
-
-
-@ app.route('/line_by_id', methods=['GET'])
-def line_by_id():
-
-    src_db_cloud = request.json['src_db_cloud']
-    src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
-                                               src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
-    
-    table_name = src_db_cloud["table"]
-
-    id = request.json['id']
-
-    row_found = SSE.line_by_id(src_db_cloud_path, table_name, id)
-
-    return jsonify({
-        'message': 'Pesquisa por hash concluída com sucesso!',
-        'row_found': row_found
-    })
-
-
-@ app.route('/register', methods=['POST'])
-def register():
-    name = request.json['name']
-    email = request.json['email']
-    pwd = request.json['password']
-    is_admin = False
-
-    user = User.query.filter_by(email=email).first()
-
-    if user:
-        return jsonify({
-            'error': 'User already registered, please try again!'
-        }), 409
-
-    user = User(name, email, pwd, is_admin)
-    db.session.add(user)
-    db.session.commit()
-
-    return jsonify({
-        'message': 'User registered successfully!'
-    })
-
-
-@ app.route('/login', methods=['POST'])
-def login():
-    email = request.json['email']
-    pwd = request.json['password']
-
-    user = User.query.filter_by(email=email).first()
-
-    if not user or not user.verify_password(pwd):
-        return jsonify({
-            "error": "Incorrect data, please try again!"
-        }), 403
-
-    payload = {
-        "id": user.id,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
-    }
-
-    token = jwt.encode(payload, app.config['SECRET_KEY'])
-
-    return jsonify({
-        'message': 'Logged successfully!',
-        'is_admin': user.is_admin,
-        'token': token
-    })
-
-
-@ app.route('/getUser', methods=['GET'])
-@ jwt_required
-def getUser(current_user):
-    return jsonify(user_share_schema.dump(current_user))
-
-
-@ app.route('/getUsers', methods=['GET'])
-@ jwt_required
-def getUsers(current_user):
-    result = users_share_schema.dump(
-        User.query.all()
-    )
-    return jsonify(result)
-
-
-@ app.route('/getValidDatabases', methods=['GET'])
-@ jwt_required
-def getValidDatabases(current_user):
-
-    result = valid_databases_share_schema.dump(
-        ValidDatabase.query.all()
-    )
-    return jsonify(result)
-
-
-@ app.route('/getDatabases', methods=['GET'])
-@ jwt_required
-def getDatabases(current_user):
-
-    id = current_user.id
-
-    result = databases_share_schema.dump(
-        Database.query.filter_by(id_user=id).all()
-    )
-    result2 = valid_databases_share_schema.dump(
-        ValidDatabase.query.all()
-    )
-    for database in result:
-        for type in result2:
-            if type['id'] == database['id_db_type']:
-                database['name_db_type'] = type['name']
-    return jsonify(result)
-
-
-@ app.route('/addDatabase', methods=['POST'])
-@ jwt_required
-def addDatabase(current_user):
-    id_user = current_user.id
-    id_db_type = request.json['id_db_type']
-    name = request.json['name']
-    host = request.json['host']
-    user = request.json['user']
-    port = request.json['port']
-    pwd = request.json['password']
-
-    database = Database(id_user, id_db_type, name, host, user, port, pwd, '')
-    db.session.add(database)
-    db.session.commit()
-
-    return jsonify({
-        'message': 'Database added successfully!'
-    })
-
-
-@ app.route('/deleteDatabase', methods=['POST'])
-@ jwt_required
-def deleteDatabase(current_user):
-
-    id = request.json['id']
-
-    database = Database.query.filter_by(id=id).first()
-
-    if not database:
-        return jsonify({
-            'error': 'Database doesn\'t exist, please try again!'
-        }), 409
-
-    db.session.delete(database)
-    db.session.commit()
-
-    result = database_share_schema.dump(
-        Database.query.filter_by(id=id).first()
-    )
-
-    if not result:
-        return jsonify({'message': 'Database deleted successfully!'})
-    else:
-        return jsonify({'error': 'Could\'nt delete database, please try again!'})
-
-
-@ app.route('/addValidDatabase', methods=['POST'])
-@ jwt_required
-def addValidDatabase(current_user):
-    name = request.json['name']
-
-    valid_database = ValidDatabase(name=name)
-    db.session.add(valid_database)
-    db.session.commit()
-
-    return jsonify({
-        'message': 'Valid database added successfully!'
-    })
-
-
-@ app.route('/deleteUser', methods=['POST'])
-@ jwt_required
-def deleteUser(current_user):
-
-    email = request.json['email']
-
-    user = User.query.filter_by(email=email).first()
-
-    if not user:
-        return jsonify({
-            'error': 'User does not exist, please try again!'
-        }), 409
-
-    db.session.delete(user)
-    db.session.commit()
-
-    result = user_share_schema.dump(
-        User.query.filter_by(email=email).first()
-    )
-
-    if not result:
-        return jsonify({'message': 'User deleted successfully!'})
-    else:
-        return jsonify({'error': 'Unable to delete user, please try again!'})
 
 
 @ app.route('/protected', methods=['GET'])

@@ -1,4 +1,5 @@
 import base64
+from turtle import pu
 
 import rsa
 import pandas as pd
@@ -10,21 +11,25 @@ def generateKeys():
     # Generating keys
     (publicKey, privateKey) = rsa.newkeys(2048)
 
-    # Save keys on chosen path
-    with open('./api/keys/publicKey.pem', 'wb') as p:
-        p.write(publicKey.save_pkcs1('PEM'))
-    with open('./api/keys/privateKey.pem', 'wb') as p:
-        p.write(privateKey.save_pkcs1('PEM'))
+    # Save in PEM format
+    publicKeyPEM = publicKey.save_pkcs1('PEM')
+    privateKeyPEM = privateKey.save_pkcs1('PEM') 
+
+    # Transform from PEM to string base64
+    publicKeyStr = str(base64.b64encode(publicKeyPEM))[2:-1]
+    privateKeyStr = str(base64.b64encode(privateKeyPEM))[2:-1]
+
+    return publicKeyStr, privateKeyStr
 
 
-def loadKeys():
-    # Load keys on chosen path
-    with open('keys/publicKey.pem', 'rb') as p:
-        publicKey = rsa.PublicKey.load_pkcs1(p.read())
-    with open('keys/privateKey.pem', 'rb') as p:
-        privateKey = rsa.PrivateKey.load_pkcs1(p.read())
+def loadKeys(publicKeyStr, privateKeyStr):
+    publicKeyByte = base64.b64decode(publicKeyStr.encode())
+    privateKeyByte = base64.b64decode(privateKeyStr.encode())
 
-    return privateKey, publicKey
+    publicKey = rsa.PublicKey.load_pkcs1(publicKeyByte)
+    privateKey = rsa.PrivateKey.load_pkcs1(privateKeyByte)
+
+    return publicKey, privateKey
 
 
 def encrypt(message, key):
@@ -186,11 +191,12 @@ def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_
 
 
 if __name__ == "__main__":
-    generateKeys()
 
-    privateKey, publicKey = loadKeys()
+    publicKeyStr, privateKeyStr = generateKeys()
 
-    message = "O RSA só é capaz de criptografar dados em uma quantidade máxima igual ao tamanho de sua chave (2048 bits = 256 bytes), menos qualquer preenchimento e dados de cabeçalho (11 bytes para preenchimento PKCS#1 v1.5)."
+    publicKey, privateKey = loadKeys(publicKeyStr, privateKeyStr)
+
+    message = "This application is being developed by a team of researchers and developers from the State University of Ceará."
 
     print(f"Message: {message}\n")
 

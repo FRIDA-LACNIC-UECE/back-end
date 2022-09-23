@@ -9,7 +9,7 @@ from sqlalchemy import (
     inspect, Integer, select, update
 )
 from sqlalchemy.orm import Session, sessionmaker
-from service import RSA
+from service import rsa_service
 
 
 def build_trapdoor(MK, keyword):
@@ -225,9 +225,9 @@ def line_by_hash(src_db_cloud_path, src_table, hash):
     del result[0]
     del result[-1]
 
-    privateKey, publicKey = RSA.loadKeys()
+    privateKey, publicKey = rsa_service.loadKeys()
 
-    result = RSA.dencrypt_list(data_list=result, key=privateKey)
+    result = rsa_service.dencrypt_list(data_list=result, key=privateKey)
 
     result.insert(0, id_current)
 
