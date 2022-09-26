@@ -9,8 +9,8 @@ class DatabaseKey(db.Model, UserMixin):
                    autoincrement=True, primary_key=True)
     id_db = db.Column(db.Integer, db.ForeignKey(
         "databases.id"), nullable=False)
-    public_key = db.Column(db.String(200), nullable=False)
-    private_key = db.Column(db.String(200), nullable=False)
+    public_key = db.Column(db.Text, nullable=False)
+    private_key = db.Column(db.Text, nullable=False)
 
     def __init__(self, id_db, public_key, private_key):
         self.id_db = id_db

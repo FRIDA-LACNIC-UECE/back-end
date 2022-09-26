@@ -1,4 +1,6 @@
 from flask import jsonify, request
+from sqlalchemy import create_engine
+from sqlalchemy_utils import create_database, database_exists
 
 from controller import app, db
 
@@ -7,6 +9,8 @@ from service.authenticate import jwt_required
 from model.database_model import Database, DatabaseSchema, database_share_schema, databases_share_schema
 from model.valid_database_model import ValidDatabase, ValidDatabaseSchema, valid_database_share_schema, valid_databases_share_schema
 from model.database_key_model import DatabaseKey
+
+from service.rsa_service import generateKeys, encrypt_database
 
 
 @ app.route('/getDatabases', methods=['GET'])
@@ -31,7 +35,10 @@ def getDatabases(current_user):
 @ app.route('/addDatabase', methods=['POST'])
 @ jwt_required
 def addDatabase(current_user):
+    # Get user id
     id_user = current_user.id
+
+    # Get clinet database information
     id_db_type = request.json['id_db_type']
     name = request.json['name']
     host = request.json['host']
@@ -40,17 +47,20 @@ def addDatabase(current_user):
     pwd = request.json['password']
 
     database = Database(id_user, id_db_type, name, host, user, port, pwd, '')
-
     db.session.add(database)
     db.session.flush()
 
-    #database_keys = DatabaseKey(database.id, )
+    # Generate rsa keys and save them
+    publicKeyStr, privateKeyStr = generateKeys()
+    database_keys = DatabaseKey(database.id, publicKeyStr, privateKeyStr)
+    db.session.add(database_keys)
 
+    # Commit updates
     db.session.commit()
 
     return jsonify({
         'message': 'Database added successfully!'
-    })
+    }), 201
 
 
 @ app.route('/deleteDatabase', methods=['POST'])

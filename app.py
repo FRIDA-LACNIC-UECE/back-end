@@ -1,13 +1,12 @@
-import datetime
+import os
 
 import pandas as pd
 from flask import jsonify, request
 from flask_migrate import Migrate
 from sqlalchemy_utils import database_exists
-from sqlalchemy import create_engine, exc
+from sqlalchemy import create_engine
 
-from controller import app, db
-from service.authenticate import jwt_required
+from controller import app, db, user, database_controller, valid_database_controller
 
 from model.valid_database_model import ValidDatabase, ValidDatabaseSchema, valid_database_share_schema, valid_databases_share_schema
 from model.user_model import User, UserSchema, user_share_schema, users_share_schema
@@ -15,9 +14,8 @@ from model.models import (AppMeta, Client, Client2, MainDB, appmeta_share_schema
                           appmetas_share_schema, maindb_share_schema,
                           maindbs_share_schema, clients_share_schema, clients2_share_schema)
 
+from service.authenticate import jwt_required
 from service import rsa_service, service, sse_service
-
-from controller import user_database, database_controller, valid_database_controller
 
 
 Migrate(app, db)
@@ -120,7 +118,7 @@ def anonimization_data2():
     })
 
 
-@ app.route('/encrypt_database', methods=['GET'])
+'''@ app.route('/encrypt_database', methods=['GET'])
 def encrypt_database():
 
     src_db_client = request.json['src_db_client']
@@ -148,7 +146,7 @@ def encrypt_database():
     return jsonify({
         'message': 'Banco de dados encriptografado com sucesso!'
     })
-
+'''
 
 @ app.route('/protected', methods=['GET'])
 @ jwt_required
@@ -255,6 +253,10 @@ def logout():
  '''
 
 if __name__ == "__main__":
+    os.system("flask db init")
+    os.system('flask db migrate -m "Initial migration"')
+    os.system('flask db upgrade')
+
     app.run(host="0.0.0.0", port=5000, debug=True)
 
 '''ssl_context=('ca/cert.pem', 'ca/key.pem')'''

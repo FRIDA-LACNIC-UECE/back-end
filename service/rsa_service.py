@@ -72,9 +72,9 @@ def dencrypt_list(data_list, key):
     return decrypted_list
 
 
-def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_list, size_batch):
+def encrypt_database(src_original_db_path, src_dest_db_path, src_table, size_batch, publicKeyStr, privateKeyStr):
 
-    privateKey, publicKey = loadKeys()
+    publicKey, privateKey = loadKeys(publicKeyStr, privateKeyStr)
 
     # Creating connection with original database
     engine_original_db = create_engine(src_original_db_path)
@@ -83,8 +83,6 @@ def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_
     # Getting columns name
     data_columns = engine_original_db.execute(f"SELECT * FROM {src_table} LIMIT 1")
     columns_list = list(data_columns.keys())
-
-    print(columns_list)
 
     # Create engine, reflect existing columns, and create table object for oldTable
     # change this for your source database
