@@ -1,16 +1,14 @@
 from flask import jsonify, request
-from sqlalchemy import create_engine
-from sqlalchemy_utils import create_database, database_exists
 
 from controller import app, db
-
-from service.authenticate import jwt_required
 
 from model.database_model import Database, DatabaseSchema, database_share_schema, databases_share_schema
 from model.valid_database_model import ValidDatabase, ValidDatabaseSchema, valid_database_share_schema, valid_databases_share_schema
 from model.database_key_model import DatabaseKey
 
-from service.rsa_service import generateKeys, encrypt_database
+from service.authenticate import jwt_required
+from service.rsa_service import generateKeys
+from service import service
 
 
 @ app.route('/getDatabases', methods=['GET'])
@@ -84,7 +82,29 @@ def deleteDatabase(current_user):
     )
 
     if not result:
-        return jsonify({'message': 'Database deleted successfully!'})
+        return jsonify({'message': 'Database deleted successfully!'}), 200
     else:
         return jsonify({'error': 'Could\'nt delete database, please try again!'})
-        
+
+
+@ app.route('/copy_database', methods=['GET'])
+def copy_database():
+
+    src_db = request.json['src_db']
+    src_db_path = "{}://{}:{}@{}:{}/{}".format(src_db['type'], src_db['user'],
+                                               src_db['password'], src_db['ip'], src_db['port'], src_db['name'])
+    src_table = src_db['table']
+
+    dest_db = request.json['dest_db']
+    dest_db_path = "{}://{}:{}@{}:{}/{}".format(dest_db['type'], dest_db['user'],
+                                                dest_db['password'], dest_db['ip'], dest_db['port'], dest_db['name'])
+    dest_table = dest_db['table']
+    dest_columns = dest_db['columns']
+
+    service.copy_database_fc(src_db_path, dest_db_path,
+                     src_table, dest_columns, dest_table)
+    service.create_model(dest_db_path, dest_table, dest_columns)
+
+    return jsonify({
+        'message': 'Database copied successfully!'
+    })

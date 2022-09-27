@@ -1,9 +1,9 @@
 import base64
-from turtle import pu
 
 import rsa
 import pandas as pd
 from sqlalchemy import create_engine, MetaData, Table, select
+from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import Session
 
 
@@ -23,6 +23,7 @@ def generateKeys():
 
 
 def loadKeys(publicKeyStr, privateKeyStr):
+    # Transform from string base64 to Byte
     publicKeyByte = base64.b64decode(publicKeyStr.encode())
     privateKeyByte = base64.b64decode(privateKeyStr.encode())
 
@@ -73,7 +74,13 @@ def dencrypt_list(data_list, key):
 
 
 def encrypt_database(src_original_db_path, src_dest_db_path, src_table, size_batch, publicKeyStr, privateKeyStr):
+    
+    # Create dest database on cloud
+    engine_dest_db = create_engine(src_dest_db_path)
+    if not database_exists(engine_dest_db.url):
+        create_database(engine_dest_db.url)
 
+    # Load rsa keys
     publicKey, privateKey = loadKeys(publicKeyStr, privateKeyStr)
 
     # Creating connection with original database

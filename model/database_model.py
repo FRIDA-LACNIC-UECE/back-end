@@ -31,12 +31,10 @@ class Database(db.Model, UserMixin):
     def __repr__(self):
         return f'<Database : {self.name}>'
 
-
 class DatabaseSchema(ma.Schema):
     class Meta:
         fields = ('id', 'id_user', 'id_db_type', 'name',
                   'host', 'user', 'port', 'password', 'ssh')
-
 
 database_share_schema = DatabaseSchema()
 databases_share_schema = DatabaseSchema(many=True)

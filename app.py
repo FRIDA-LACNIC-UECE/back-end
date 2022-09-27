@@ -6,7 +6,7 @@ from flask_migrate import Migrate
 from sqlalchemy_utils import database_exists
 from sqlalchemy import create_engine
 
-from controller import app, db, user, database_controller, valid_database_controller
+from controller import app, db, database_controller, user_controller, valid_database_controller, rsa_controller
 
 from model.valid_database_model import ValidDatabase, ValidDatabaseSchema, valid_database_share_schema, valid_databases_share_schema
 from model.user_model import User, UserSchema, user_share_schema, users_share_schema
@@ -74,29 +74,6 @@ def test_anon():
         print('Something went wrong!')
 
     return jsonify(before=df.values.tolist(), after=df2.values.tolist())
-
-
-@ app.route('/copy_database', methods=['GET'])
-def copy_database():
-
-    src_db = request.json['src_db']
-    src_db_path = "{}://{}:{}@{}:{}/{}".format(src_db['type'], src_db['user'],
-                                               src_db['password'], src_db['ip'], src_db['port'], src_db['name'])
-    src_table = src_db['table']
-
-    dest_db = request.json['dest_db']
-    dest_db_path = "{}://{}:{}@{}:{}/{}".format(dest_db['type'], dest_db['user'],
-                                                dest_db['password'], dest_db['ip'], dest_db['port'], dest_db['name'])
-    dest_table = dest_db['table']
-    dest_columns = dest_db['columns']
-
-    service.copy_database_fc(src_db_path, dest_db_path,
-                     src_table, dest_columns, dest_table)
-    service.create_model(dest_db_path, dest_table, dest_columns)
-
-    return jsonify({
-        'message': 'Database copied successfully!'
-    })
 
 
 @ app.route('/anonimization_data2', methods=['GET'])
