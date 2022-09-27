@@ -1,16 +1,9 @@
+import csv
+import pandas as pd
 from sqlalchemy import (MetaData, Table, create_engine, inspect)
 from sqlalchemy.orm import sessionmaker
 
-from model.models import (AppMeta)
 
-import numpy as np
-import scipy.linalg as la
-import csv
-import pandas as pd
-
-
-# create_model('mysql://root:Admin538*@localhost:3306/public',
-#             'anonymizations', ['id', 'id_database', 'id_anonymization_type', 'table', 'columns'])
 def create_model(db, table, columns):
 
     types = {
@@ -102,9 +95,8 @@ def copy_database_fc(src_db_path, dest_db_path, src_table, dest_columns, dest_ta
         if(column.name in dest_columns):
             destTable.append_column(column._copy())
 
-    query = sourceSession.query(
-        AppMeta.id, AppMeta.email, AppMeta.cpf).all()
-
+    query = sourceSession.query(srcTable)
+    
     try:
         if not destTable.exists():
             destTable.create(checkfirst=True)
@@ -114,122 +106,6 @@ def copy_database_fc(src_db_path, dest_db_path, src_table, dest_columns, dest_ta
         destSession.commit()
     except Exception as e:
         print(e)
-
-
-def anonimization_data(src_db_client_path, src_table, columns_to_anonimization):
-
-    # create engine, reflect existing columns, and create table object for oldTable
-    # change this for your source database
-    srcEngineClient = create_engine(src_db_client_path)
-    SourceSessionClient = sessionmaker(srcEngineClient)
-    srcEngineClient._metadata = MetaData(bind=srcEngineClient)
-    srcEngineClient._metadata.reflect(srcEngineClient)  # get columns from existing table
-    srcEngineClient._metadata.tables[src_table].columns = [
-        i for i in srcEngineClient._metadata.tables[src_table].columns if (i.name in columns_to_anonimization)]
-    srcTableClient = Table(src_table, srcEngineClient._metadata)
-
-    sourceSessionClient = SourceSessionClient()
-    
-    query_client = sourceSessionClient.query(srcTableClient).all()
-    #query_user = sourceSessionUser.query(srcTableUser).all()
-
-    result = pd.DataFrame(data=query_client, columns=columns_to_anonimization)
-
-    save_id = result['id']
-    
-    print(result)
-
-    result = result.drop('id', axis=1)
-
-    columns_to_anonimization.remove('id')
-
-    result_anomization = result[columns_to_anonimization].astype('int')
-
-    result_anomization = result_anomization.to_numpy()
-
-    result_anomization = anonimization(result_anomization)
-    
-    result[columns_to_anonimization] = pd.DataFrame(data=result_anomization, columns=columns_to_anonimization)
-
-    result.index = save_id
-
-    #result_user = pd.DataFrame(data=query_user, columns=['id', 'line_hash'])
-    #result['line_hash'] = result_user['line_hash']
-
-    print(result)
-
-    dictionary_update_data = result.to_dict(orient='records')
-
-    first_line = sourceSessionClient.query(srcTableClient).first()
-    id = first_line.id
-
-    print(first_line)
-
-    '''query = "ALTER TABLE " + str(destTable) + " ADD line_hash TEXT"
-    srcEngineClient.execute(query)
-    columns_to_anonimization.append("line_hash")
-    print("Add line_hash")'''
-
-    sourceSessionClient.commit()
-    sourceSessionClient.close()
-
-    for row_update in dictionary_update_data:
-        print(row_update)
-        sourceSessionClient.query(srcTableClient).\
-        filter(srcTableClient.c[0] == id).\
-        update(row_update)
-        id += 1
-
-    sourceSessionClient.commit()
-
-    '''try:
-        if not destTable.exists():
-            destTable.create(checkfirst=True)
-        destSession.execute('DELETE FROM {}'.format(dest_table))
-        destSession.commit()
-        with destEngine.begin() as connection:
-            result.to_sql(dest_table, con=connection, if_exists='replace')
-    except Exception as e:
-        print(e)'''
-
-
-def anonimization(data):
-    # calculate the mean of each column
-    mean = np.array(np.mean(data, axis=0).T)
-
-    # center data
-    data_centered = data - mean
-
-    # calculate the covariance matrix
-    cov_matrix = np.cov(data_centered, rowvar=False)
-
-    # calculate the eignvalues and eignvectors
-    evals, evecs = la.eigh(cov_matrix)
-
-    # sort them
-    idx = np.argsort(evals)[::-1]
-
-    # Each columns of this matrix is an eingvector
-    evecs = evecs[:, idx]
-    evals = evals[idx]
-
-    # explained variance
-    variance_retained = np.cumsum(evals)/np.sum(evals)
-
-    # calculate the transformed data
-    data_transformed = np.dot(evecs.T, data_centered.T).T
-
-    # randomize eignvectors
-    new_evecs = evecs.copy().T
-    for i in range(len(new_evecs)):
-        np.random.shuffle(new_evecs[i])
-    new_evecs = np.array(new_evecs).T
-
-    # go back to the original dimension
-    data_original_dimension = np.dot(data_transformed, new_evecs.T)
-    data_original_dimension += mean
-
-    return data_original_dimension
 
 
 def csv_to_sql():

@@ -45,7 +45,7 @@ def login():
 
     payload = {
         "id": user.id,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=240)
     }
 
     token = jwt.encode(payload, app.config['SECRET_KEY'])
@@ -95,3 +95,10 @@ def deleteUser(current_user):
         return jsonify({'message': 'User deleted successfully!'})
     else:
         return jsonify({'error': 'Unable to delete user, please try again!'})
+
+'''
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+'''

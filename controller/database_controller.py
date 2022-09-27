@@ -1,14 +1,17 @@
 from flask import jsonify, request
+from sqlalchemy import create_engine
+from sqlalchemy_utils import database_exists
+from sqlalchemy import create_engine, inspect
 
 from controller import app, db
 
-from model.database_model import Database, DatabaseSchema, database_share_schema, databases_share_schema
-from model.valid_database_model import ValidDatabase, ValidDatabaseSchema, valid_database_share_schema, valid_databases_share_schema
+from model.database_model import Database, database_share_schema, databases_share_schema
+from model.valid_database_model import ValidDatabase, valid_database_share_schema, valid_databases_share_schema
 from model.database_key_model import DatabaseKey
 
 from service.authenticate import jwt_required
 from service.rsa_service import generateKeys
-from service import service
+from service.database_service import copy_database_fc, create_model
 
 
 @ app.route('/getDatabases', methods=['GET'])
@@ -101,10 +104,85 @@ def copy_database():
     dest_table = dest_db['table']
     dest_columns = dest_db['columns']
 
-    service.copy_database_fc(src_db_path, dest_db_path,
+    copy_database_fc(src_db_path, dest_db_path,
                      src_table, dest_columns, dest_table)
-    service.create_model(dest_db_path, dest_table, dest_columns)
+    create_model(dest_db_path, dest_table, dest_columns)
 
     return jsonify({
         'message': 'Database copied successfully!'
     })
+
+
+@app.route('/test_connection', methods=['POST'])
+@jwt_required
+def test_connection(current_user):
+    try:
+        db = "{}://{}:{}@{}:{}/{}".format(request.json['type'].lower(), request.json['user'],
+                                          request.json['password'], request.json['host'], request.json['port'], request.json['name'])
+        engine = create_engine(db)
+        if database_exists(engine.url):
+            return jsonify({
+                'message': 'Connection Successful!'
+            })
+    except:
+        return jsonify({
+            'error': 'Cannot check if database exists!'
+        }), 409
+
+
+@app.route('/columnsDatabase', methods=['POST'])
+@jwt_required
+def columns_database(current_user):
+    # Get id of database to encrypt
+    id_db = request.json['id_db']
+
+    # Get database information by id
+    result_database = database_share_schema.dump(
+        Database.query.filter_by(id=id_db).first()
+    )
+
+    if not result_database:
+        return jsonify({'message': 'Database não encontrado!'}), 404
+
+    db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
+    src_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+
+    # Get table name
+    table_name = request.json['table']
+
+    # Create connection to database
+    engine_db = create_engine(src_db_path)
+
+    # Get columns and their types
+    columns = {}
+
+    insp = inspect(engine_db)
+    columns_table = insp.get_columns(table_name)
+
+    for c in columns_table :
+        columns[f"{c['name']}"] = str(c['type'])
+
+    return jsonify(columns)
+
+
+@app.route('/tablesDatabase', methods=['POST'])
+@jwt_required
+def tables_database(current_user):
+    # Get id of database to encrypt
+    id_db = request.json['id_db']
+
+    # Get database information by id
+    result_database = database_share_schema.dump(
+        Database.query.filter_by(id=id_db).first()
+    )
+
+    if not result_database:
+        return jsonify({'message': 'Database não encontrado!'}), 404
+
+    db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
+    src_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+
+    # Create connection to database
+    engine_db = create_engine(src_db_path)
+
+    return {"tables": list(engine_db.table_names())}

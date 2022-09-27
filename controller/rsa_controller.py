@@ -11,9 +11,12 @@ from service.authenticate import jwt_required
 from service import rsa_service
 
 
-@ app.route('/encrypt_database', methods=['GET'])
+@ app.route('/encrypt_database', methods=['POST'])
 @ jwt_required
 def encrypt_database(current_user):
+    # Get name current user
+    name_current = current_user.name
+
     # Get id of database to encrypt
     id_db = request.json['id_db']
 
@@ -27,24 +30,24 @@ def encrypt_database(current_user):
 
     db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
     src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
-    src_dest_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}_cloud"
+    src_dest_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}_{name_current}"
+
+    # Get tables names
+    table_name = request.json['table']
+
+    # Get columns to encrypted
+    columns_list = request.json['columns']
 
     # Get public and private keys of database
     result_keys = database_key_share_schema.dump(
         DatabaseKey.query.filter_by(id_db=id_db).first()
     )
 
-    # Get tables names
-    engine_db = create_engine(src_client_db_path)
-    tables_names = engine_db.table_names()
-
-    # Encrypting database
-    
-    for table_name in tables_names:
-        rsa_service.encrypt_database(
-            src_client_db_path, src_dest_db_path, table_name, 
-            1000, result_keys['public_key'], result_keys['private_key']
-        )
+    #try:
+    rsa_service.encrypt_database(
+        src_client_db_path, src_dest_db_path, table_name, columns_list,
+        1000, result_keys['public_key'], result_keys['private_key']
+    )
     return jsonify({'message': 'Banco de dados criptografado com sucesso!'}), 200
-
-       
+    #except:
+    #return jsonify({'message': 'Não foi possível criptografar o banco de dados!'}), 500
