@@ -14,8 +14,7 @@ class Anonymization(db.Model, UserMixin):
     table = db.Column(db.String(150), nullable=False)
     columns = db.Column(db.JSON, nullable=False)
 
-    def __init__(self, id, id_database, id_anonymization_type, table, columns):
-        self.id = id
+    def __init__(self, id_database, id_anonymization_type, table, columns):
         self.id_database = id_database
         self.id_anonymization_type = id_anonymization_type
         self.table = table
@@ -30,4 +29,4 @@ class AnonymizationSchema(ma.Schema):
                   'columns')
 
 anonymization_share_schema = AnonymizationSchema()
-anonymization_share_schema = AnonymizationSchema(many=True)
+anonymizations_share_schema = AnonymizationSchema(many=True)

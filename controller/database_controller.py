@@ -117,13 +117,27 @@ def copy_database():
 @jwt_required
 def test_connection(current_user):
     try:
-        db = "{}://{}:{}@{}:{}/{}".format(request.json['type'].lower(), request.json['user'],
-                                          request.json['password'], request.json['host'], request.json['port'], request.json['name'])
-        engine = create_engine(db)
+        # Get id of database to encrypt
+        id_db = request.json['id_db']
+
+        # Get database path by id
+        result_database = database_share_schema.dump(
+            Database.query.filter_by(id=id_db).first()
+        )
+
+        if not result_database:
+            return jsonify({'message': 'Database não encontrado!'}), 404
+
+        db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
+        src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+        
+        # Create connection to database
+        engine = create_engine(src_client_db_path)
+
         if database_exists(engine.url):
             return jsonify({
                 'message': 'Connection Successful!'
-            })
+            }), 200
     except:
         return jsonify({
             'error': 'Cannot check if database exists!'
@@ -171,7 +185,7 @@ def tables_database(current_user):
     # Get id of database to encrypt
     id_db = request.json['id_db']
 
-    # Get database information by id
+    # Get database path by id
     result_database = database_share_schema.dump(
         Database.query.filter_by(id=id_db).first()
     )

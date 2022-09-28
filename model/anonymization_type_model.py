@@ -9,8 +9,7 @@ class AnonymizationType(db.Model, UserMixin):
                    autoincrement=True, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
 
-    def __init__(self, id, name):
-        self.id = id
+    def __init__(self, name):
         self.name = name
 
     def __repr__(self):

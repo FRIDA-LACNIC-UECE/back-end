@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 import scipy.linalg as la
-from sqlalchemy import (MetaData, Table, create_engine, inspect)
+from sqlalchemy import MetaData, Table, create_engine
 from sqlalchemy.orm import sessionmaker
 
 
-def anonimization_data(src_db_client_path, src_table, columns_to_anonimization):
+def anonimization_database(src_db_client_path, src_table, columns_to_anonimization):
 
     # create engine, reflect existing columns, and create table object for oldTable
     # change this for your source database
@@ -20,7 +20,6 @@ def anonimization_data(src_db_client_path, src_table, columns_to_anonimization):
     sourceSessionClient = SourceSessionClient()
     
     query_client = sourceSessionClient.query(srcTableClient).all()
-    #query_user = sourceSessionUser.query(srcTableUser).all()
 
     result = pd.DataFrame(data=query_client, columns=columns_to_anonimization)
 
@@ -36,14 +35,11 @@ def anonimization_data(src_db_client_path, src_table, columns_to_anonimization):
 
     result_anomization = result_anomization.to_numpy()
 
-    result_anomization = anonimization(result_anomization)
+    result_anomization = anonimization_data(result_anomization)
     
     result[columns_to_anonimization] = pd.DataFrame(data=result_anomization, columns=columns_to_anonimization)
 
     result.index = save_id
-
-    #result_user = pd.DataFrame(data=query_user, columns=['id', 'line_hash'])
-    #result['line_hash'] = result_user['line_hash']
 
     print(result)
 
@@ -53,11 +49,6 @@ def anonimization_data(src_db_client_path, src_table, columns_to_anonimization):
     id = first_line.id
 
     print(first_line)
-
-    '''query = "ALTER TABLE " + str(destTable) + " ADD line_hash TEXT"
-    srcEngineClient.execute(query)
-    columns_to_anonimization.append("line_hash")
-    print("Add line_hash")'''
 
     sourceSessionClient.commit()
     sourceSessionClient.close()
@@ -71,18 +62,8 @@ def anonimization_data(src_db_client_path, src_table, columns_to_anonimization):
 
     sourceSessionClient.commit()
 
-    '''try:
-        if not destTable.exists():
-            destTable.create(checkfirst=True)
-        destSession.execute('DELETE FROM {}'.format(dest_table))
-        destSession.commit()
-        with destEngine.begin() as connection:
-            result.to_sql(dest_table, con=connection, if_exists='replace')
-    except Exception as e:
-        print(e)'''
 
-
-def anonimization(data):
+def anonimization_data(data):
     # calculate the mean of each column
     mean = np.array(np.mean(data, axis=0).T)
 

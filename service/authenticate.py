@@ -1,8 +1,6 @@
 from functools import wraps
 #from itsdangerous import json
-
 import jwt
-
 from flask import request, jsonify, current_app
 
 from model.user_model import User

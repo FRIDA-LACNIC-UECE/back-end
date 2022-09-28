@@ -4,12 +4,12 @@ from flask_migrate import Migrate
 
 from controller import (
     app, db, database_controller, user_controller, 
-    valid_database_controller, rsa_controller
+    valid_database_controller, rsa_controller,
+    anonymization_controller, anonymization_type_controller
 )
 
 from model import (
-    user_model, anonymization_type_model, anonymzation_model, 
-    valid_database_model, database_model, database_key_model
+    anonymization_model, user_model, anonymization_type_model, valid_database_model, database_model, database_key_model
 )
     
 

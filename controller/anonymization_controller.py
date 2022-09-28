@@ -1,97 +1,78 @@
-'''@app.route('/test_anon', methods=['GET'])
-def test_anon():
-    columns = [
-        '_0',
-        '_1',
-        '_2',
-        '_3',
-        '_4',
-        '_5',
-        '_6',
-        '_7',
-        '_8',
-        '_9'
-    ]
+from flask import jsonify, request
 
-    result = clients_share_schema.dump(
-        Client.query.limit(1000).all()
+from controller import app, db
+from model.database_model import Database, database_share_schema
+from model.valid_database_model import ValidDatabase
+from model.anonymization_model import Anonymization, anonymizations_share_schema
+from service import anonymization_service
+from service.authenticate import jwt_required
+
+
+@ app.route('/getAnonymization', methods=['GET'])
+@ jwt_required
+def getAnonymization(current_user):
+
+    result = anonymizations_share_schema.dump(
+        Anonymization.query.all()
     )
 
-    df = pd.DataFrame(data=result, columns=columns).astype(int)
-    df2 = pd.DataFrame(data=service.anonimization(df), columns=columns)
-
-    # Create engine to connect with DB
-    try:
-        engine = create_engine(
-            'mysql://root:Admin538*@localhost:3306/public')
-    except:
-        print("Can't create 'engine")
-
-    # Standart method of Pandas to deliver data from DataFrame to PastgresQL
-    try:
-        with engine.begin() as connection:
-            df2.to_sql('client2', con=connection,
-                       index_label='id', if_exists='replace')
-            print('Done, ok!')
-    except:
-        print('Something went wrong!')
-
-    return jsonify(before=df.values.tolist(), after=df2.values.tolist())
+    return jsonify(result)
 
 
-@ app.route('/anonimization_data2', methods=['GET'])
-def anonimization_data2():
+@ app.route('/addAnonymization', methods=['POST'])
+@jwt_required
+def addAnonimization(current_user):
+    # Get id of database to encrypt
+    id_db = request.json['id_db']
 
-    src_db_client = request.json['src_db_client']
+    # Get anonymization type
+    id_anonymization_type = request.json['id_anonymization_type']
 
-    src_db_client_path = "{}://{}:{}@{}:{}/{}".format(src_db_client['type'], src_db_client['user'],
-                                               src_db_client['password'], src_db_client['ip'], src_db_client['port'], src_db_client['name'])
+    # Get chosen table
+    table_name = request.json['table']
 
-    src_table = src_db_client['table']
+    # Get chosen columns
+    columns_to_anonimization = request.json['columns']
 
-    columns_to_anonimization = src_db_client['columns']
+    anonymization = Anonymization(
+        id_database=id_db, id_anonymization_type=id_anonymization_type, 
+        table=table_name, columns=columns_to_anonimization
+    )
 
-    service.anonimization_data(src_db_client_path, src_table, columns_to_anonimization)
+    db.session.add(anonymization)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Anonymization added successfully!'
+    }), 201
+
+
+@ app.route('/anonimization_database', methods=['GET'])
+@jwt_required
+def anonimization_database(current_user):
+    # Get id of database to encrypt
+    id_db = request.json['id_db']
+
+    # Get database path by id
+    result_database = database_share_schema.dump(
+        Database.query.filter_by(id=id_db).first()
+    )
+
+    if not result_database:
+        return jsonify({'message': 'Database não encontrado!'}), 404
+
+    db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
+    src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+
+    # Get chosen table
+    src_table = request.json['table']
+
+    # Get chosen columns
+    columns_to_anonimization = request.json['columns']
+
+    # Run anonymization
+    anonymization_service.anonimization_database(src_client_db_path, src_table, columns_to_anonimization)
 
     return jsonify({
         'message': 'Dados anonimizado com sucesso!'
-    })
-
-
-@ app.route('/protected', methods=['GET'])
-@ jwt_required
-def protected(current_user):
-    result = appmetas_share_schema.dump(
-        AppMeta.query.all()
-    )
-    result2 = maindbs_share_schema.dump(
-        MainDB.query.all()
-    )
-    return jsonify(AppMeta=result, MainDB=result2)
-
-
-@ app.route('/anonymize_data', methods=['GET'])
-@ jwt_required
-def encrypt_data(current_user):
-    result = appmetas_share_schema.dump(
-        AppMeta.query.all()
-    )
-
-    result2 = result
-
-    for index, x in enumerate(result):
-        exists = MainDB.query.filter_by(user_id=x['id']).update(
-            {'cpf': x['cpf']}, synchronize_session="fetch")
-        if(not exists):
-            db.session.add(MainDB(x['id'], x['email'], x['cpf']))
-
-        AppMeta.query.filter_by(
-            id=x['id']).update({'email': result2[index]['email'], 'cpf': result2[index]['cpf']})
-    db.session.commit()
-    result = maindbs_share_schema.dump(
-        MainDB.query.all()
-    )
-    result2 = appmetas_share_schema.dump(
-        AppMeta.query.all()
-    )
-    return jsonify(MainDB=result, AppMeta=result2)'''
+    }), 200
