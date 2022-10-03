@@ -1,5 +1,6 @@
 import os
 
+from flask import redirect
 from flask_migrate import Migrate
 
 from controller import (
@@ -25,7 +26,7 @@ def make_shell_context():
 
 @app.route('/')
 def index():
-    return 'Flask is running'
+    return redirect("https://github.com/FRIDA-LACNIC-UECE", code=302)
 
 
 if __name__ == "__main__":
