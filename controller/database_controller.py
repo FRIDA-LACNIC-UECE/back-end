@@ -67,7 +67,7 @@ def addDatabase(current_user):
 @ app.route('/deleteDatabase', methods=['POST'])
 @ jwt_required
 def deleteDatabase(current_user):
-
+    
     id = request.json['id']
 
     database = Database.query.filter_by(id=id).first()

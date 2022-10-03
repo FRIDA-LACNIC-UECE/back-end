@@ -47,9 +47,9 @@ def addAnonimization(current_user):
     }), 201
 
 
-@ app.route('/anonimization_database', methods=['GET'])
+@ app.route('/anonymization_database', methods=['POST'])
 @jwt_required
-def anonimization_database(current_user):
+def anonymization_database(current_user):
     # Get id of database to encrypt
     id_db = request.json['id_db']
 
@@ -64,14 +64,15 @@ def anonimization_database(current_user):
     db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
     src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
 
-    # Get chosen table
-    src_table = request.json['table']
-
     # Get chosen columns
-    columns_to_anonimization = request.json['columns']
+    lists_columns_anonymizations = anonymizations_share_schema.dump(
+        Anonymization.query.filter_by(id_database=id_db).all()
+    )
 
     # Run anonymization
-    anonymization_service.anonimization_database(src_client_db_path, src_table, columns_to_anonimization)
+    anonymization_service.anonimization_database(src_client_db_path, lists_columns_anonymizations)
+
+    print("\n\nAnonimizando\n\n")
 
     return jsonify({
         'message': 'Dados anonimizado com sucesso!'
