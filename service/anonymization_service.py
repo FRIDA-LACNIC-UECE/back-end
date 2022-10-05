@@ -1,5 +1,5 @@
 from model.anonymization_type_model import AnonymizationType
-from service import ppcbtf_anonymization_service, ppcbti_anonymization_service
+from service import ppcbtf_anonymization_service, ppcbti_anonymization_service, anonypy_anonymization_service
 
 
 def anonimization_database(src_client_db_path, lists_columns_anonymizations):
@@ -26,6 +26,14 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
                 columns_to_anonymization=anonymization['columns']
             )
             print("\n\nppcbti anonimizando\n\n")
+
+        elif anonymization_type_name == "anonypy":
+            anonypy_anonymization_service.anonymization_database(
+                src_client_db_path, 
+                src_table=anonymization['table'],
+                columns_to_anonymization=anonymization['columns']
+            )
+            print("\n\anonypy anonimizando\n\n")
         
         else:
             return 406 #Not Acceptable
