@@ -78,6 +78,7 @@ def anonymization_database(src_db_client_path, src_table, columns_to_anonymizati
 
     sourceSessionClient.commit()
     
+    
 if __name__ == "__main__":
     anonymization_database(
         "mysql://root:Dd16012018@localhost:3306/ficticio_database",

@@ -23,10 +23,12 @@ class Anonymization(db.Model, UserMixin):
     def __repr__(self):
         return f'<Anonymization : {self.id_anonymization_type} - {self.table} - {self.columns}>'
 
+
 class AnonymizationSchema(ma.Schema):
     class Meta:
         fields = ('id', 'id_database', 'id_anonymization_type', 'table',
                   'columns')
+
 
 anonymization_share_schema = AnonymizationSchema()
 anonymizations_share_schema = AnonymizationSchema(many=True)

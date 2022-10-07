@@ -17,7 +17,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
                 src_table=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
-            print("\n\nppcbtf anonimizando\n\n")
+            print("\n\nppcbtf anonimizando\n\n") # DELETE
 
         elif anonymization_type_name == "ppcbti":
             ppcbti_anonymization_service.anonymization_database(
@@ -25,7 +25,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
                 src_table=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
-            print("\n\nppcbti anonimizando\n\n")
+            print("\n\nppcbti anonimizando\n\n") # DELETE
 
         elif anonymization_type_name == "anonypy":
             anonypy_anonymization_service.anonymization_database(
@@ -33,7 +33,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
                 src_table=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
-            print("\n\anonypy anonimizando\n\n")
+            print("\n\anonypy anonimizando\n\n") # DELETE
         
         else:
             return 406 #Not Acceptable

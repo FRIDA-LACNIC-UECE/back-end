@@ -12,68 +12,108 @@ from service.authenticate import jwt_required
 @ jwt_required
 def getAnonymization(current_user):
 
-    result = anonymizations_share_schema.dump(
-        Anonymization.query.all()
-    )
+    try:
+        result = anonymizations_share_schema.dump(
+            Anonymization.query.all()
+        )
+    except:
+        return jsonify({
+            'message': 'anonymization_not_found'
+        }), 404
 
     return jsonify(result)
 
 
 @ app.route('/addAnonymization', methods=['POST'])
 @jwt_required
-def addAnonimization(current_user):
-    # Get id of database to encrypt
-    id_db = request.json['id_db']
+def addAnonymization(current_user):
 
-    # Get anonymization type
-    id_anonymization_type = request.json['id_anonymization_type']
+    try:
+        # Get id of database to encrypt
+        id_db = request.json.get('id_db')
 
-    # Get chosen table
-    table_name = request.json['table']
+        # Get anonymization type
+        id_anonymization_type = request.json.get('id_anonymization_type')
 
-    # Get chosen columns
-    columns_to_anonimization = request.json['columns']
+        # Get chosen table
+        table_name = request.json.get('table')
 
-    anonymization = Anonymization(
-        id_database=id_db, id_anonymization_type=id_anonymization_type, 
-        table=table_name, columns=columns_to_anonimization
-    )
+        # Get chosen columns
+        columns_to_anonimization = request.json.get('columns')
+ 
+        anonymization = Anonymization(
+            id_database=id_db, id_anonymization_type=id_anonymization_type, 
+            table=table_name, columns=columns_to_anonimization
+        )
 
-    db.session.add(anonymization)
-    db.session.commit()
+        db.session.add(anonymization)
+        db.session.commit()
+    except:
+        return jsonify({
+            'message': 'anonymization_invalid_data'
+        }), 400
 
     return jsonify({
-        'message': 'Anonymization added successfully!'
+        'message': 'anonymization_created'
     }), 201
 
+
+@ app.route('/deleteAnonymization', methods=['DELETE'])
+@jwt_required
+def deleteAnonymization(current_user):
+    
+    # Get anonymization data
+    id_anonymization = request.json.get('id_anonymization')
+    anonymization = Anonymization.query.filter_by(id=id_anonymization).first()
+
+    if anonymization == None:
+        return jsonify({
+            'message': 'anonymization_not_found'
+        }), 404
+    
+    try:
+        db.session.delete(anonymization)
+        db.session.commit()
+    except:
+        return jsonify({
+            'message': 'anonymization_not_deleted'
+        }), 400
+
+    return jsonify({'message': 'anonymization_deleted'})
+    
 
 @ app.route('/anonymization_database', methods=['POST'])
 @jwt_required
 def anonymization_database(current_user):
-    # Get id of database to encrypt
-    id_db = request.json['id_db']
 
-    # Get database path by id
-    result_database = database_share_schema.dump(
-        Database.query.filter_by(id=id_db).first()
-    )
+    try:
+        # Get id of database to encrypt
+        id_db = request.json['id_db']
 
-    if not result_database:
-        return jsonify({'message': 'Database não encontrado!'}), 404
+        # Get database path by id
+        result_database = database_share_schema.dump(
+            Database.query.filter_by(id=id_db).first()
+        )
 
-    db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
-    src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+        db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
 
-    # Get chosen columns
-    lists_columns_anonymizations = anonymizations_share_schema.dump(
-        Anonymization.query.filter_by(id_database=id_db).all()
-    )
+        src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+    except:
+        return jsonify({'message': 'database_not_found'}), 404
 
-    # Run anonymization
-    anonymization_service.anonimization_database(src_client_db_path, lists_columns_anonymizations)
+    try:
+        # Get chosen columns
+        lists_columns_anonymizations = anonymizations_share_schema.dump(
+            Anonymization.query.filter_by(id_database=id_db).all()
+        )
 
-    print("\n\nAnonimizando\n\n")
+        # Run anonymization
+        anonymization_service.anonimization_database(src_client_db_path, lists_columns_anonymizations)
+    except:
+        return jsonify({
+            'message': 'anonymization_invalid_data'
+        }), 400
 
     return jsonify({
-        'message': 'Dados anonimizado com sucesso!'
+        'message': 'anonymization_done'
     }), 200
