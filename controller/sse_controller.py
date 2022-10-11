@@ -59,6 +59,6 @@ def line_by_id():
     row_found = sse_service.line_by_id(src_db_cloud_path, table_name, id)
 
     return jsonify({
-        'message': 'Pesquisa por hash concluída com sucesso!',
+        'message': 'Pesquisa por id concluída com sucesso!',
         'row_found': row_found
     })

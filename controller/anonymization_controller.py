@@ -18,7 +18,7 @@ def getAnonymization(current_user):
         )
     except:
         return jsonify({
-            'message': 'anonymization_not_found'
+            'message': 'anonymizations_not_found'
         }), 404
 
     return jsonify(result)
@@ -62,16 +62,16 @@ def addAnonymization(current_user):
 @jwt_required
 def deleteAnonymization(current_user):
     
-    # Get anonymization data
-    id_anonymization = request.json.get('id_anonymization')
-    anonymization = Anonymization.query.filter_by(id=id_anonymization).first()
-
-    if anonymization == None:
-        return jsonify({
-            'message': 'anonymization_not_found'
-        }), 404
-    
     try:
+        # Get anonymization data
+        id_anonymization = request.json.get('id_anonymization')
+        anonymization = Anonymization.query.filter_by(id=id_anonymization).first()
+
+        if anonymization == None:
+            return jsonify({
+                'message': 'anonymization_not_found'
+            }), 404
+        
         db.session.delete(anonymization)
         db.session.commit()
     except:
@@ -88,7 +88,7 @@ def anonymization_database(current_user):
 
     try:
         # Get id of database to encrypt
-        id_db = request.json['id_db']
+        id_db = request.json.get('id_db')
 
         # Get database path by id
         result_database = database_share_schema.dump(

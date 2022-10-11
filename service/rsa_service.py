@@ -120,14 +120,6 @@ def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_
             from_db = []
 
             for result in results:
-                # Transform result from tuple to list
-                #data_list = list(result)
-
-                # Remove id into data_list
-                #del columns_list[index_id]
-
-                #encrypted_list = encrypt_list(data_list, publicKey)
-
                 from_db.append(list(result))
 
 
