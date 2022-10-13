@@ -32,9 +32,20 @@ def encrypt_database(current_user):
         if result_database.id_user != current_user.id:
             return jsonify({'message': 'user_unauthorized'}), 401
 
-        db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
-        src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
-        src_dest_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}_{name_current}"
+        db_type_name = ValidDatabase.query.filter_by(
+            id=result_database['id_db_type']
+        ).first().name
+
+        src_client_db_path = "{}://{}:{}@{}:{}/{}".format(
+            db_type_name, result_database['user'], result_database['password'],
+            result_database['host'], result_database['port'], result_database['name']
+        )
+
+        src_dest_db_path = "{}://{}:{}@{}:{}/{}".format(
+            db_type_name, result_database['user'], result_database['password'],
+            result_database['host'], result_database['port'], 
+            f"{result_database['name']}_{name_current}"
+        )
 
         # Get tables names
         table_name = request.json.get('table')
@@ -50,13 +61,12 @@ def encrypt_database(current_user):
         if not result_keys:
             return jsonify({'message': 'database_keys_not_found'}), 404
 
+        # Run cryptography
         rsa_service.encrypt_database(
             src_client_db_path, src_dest_db_path, table_name, columns_list,
             1000, result_keys['public_key'], result_keys['private_key']
         )
     except:
-        return jsonify({
-            'message': 'cryptography_invalid_data'
-        }), 400
+        return jsonify({'message': 'cryptography_invalid_data'}), 400
         
     return jsonify({'message': 'database_encrypted'}), 200

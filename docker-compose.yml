@@ -9,12 +9,12 @@ services:
         - ./db/entrypoint:/docker-entrypoint-initdb.d
     restart: always
 
-  agent:
+  api:
     build: "./api"
-    image: agent
-    container_name: agent-container
+    image: api
+    container_name: api-container
     ports:
-        - "5000:5000"
+        - "80:80"
     restart: always
     depends_on:
         - db

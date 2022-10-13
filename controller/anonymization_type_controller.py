@@ -25,12 +25,12 @@ def getAnonymizationType(current_user):
 @ jwt_required
 def addAnonymizationType(current_user):
 
-    if current_user.is_admin != 1:
-        return jsonify({
-            'message': 'required_administrator_privileges'
-        }), 403
-
     try:
+        if current_user.is_admin != 1:
+            return jsonify({
+                'message': 'required_administrator_privileges'
+            }), 403
+
         name = request.json.get('name')
 
         anonymization_type = AnonymizationType(name=name)
@@ -49,13 +49,13 @@ def addAnonymizationType(current_user):
 @ app.route('/deleteAnonymizationType', methods=['DELETE'])
 @jwt_required
 def deleteAnonymizationType(current_user):
-
-    if current_user.is_admin != 1:
-        return jsonify({
-            'message': 'required_administrator_privileges'
-        }), 403
     
     try:
+        if current_user.is_admin != 1:
+            return jsonify({
+                'message': 'required_administrator_privileges'
+            }), 403
+            
         # Get anonymization type data
         id_anonymization_type = request.json.get('id_anonymization_type')
         anonymization_type = AnonymizationType.query.filter_by(id=id_anonymization_type).first()

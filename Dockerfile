@@ -1,12 +1,12 @@
 FROM python:3.10.6
 
-WORKDIR /agent
-COPY /agent /agent
+WORKDIR /api
+COPY ./api .
 
 RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 5000
+EXPOSE 80
 
 ENTRYPOINT ["python"]
-CMD ["main.py"]
+CMD ["app.py"]
