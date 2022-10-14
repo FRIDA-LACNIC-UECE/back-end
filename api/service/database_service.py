@@ -1,40 +1,8 @@
 import csv
 import pandas as pd
 from sqlalchemy import (MetaData, Table, create_engine, inspect)
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
-
-def show_database(src_client_db_path, src_table, page=0, per_page=100):
-
-    # Creating connection with original database
-    engine_client_db = create_engine(src_client_db_path)
-    session_original_db = Session(engine_client_db)
-
-    # Create engine, reflect existing columns, and create table object for oldTable
-    # change this for your source database
-    engine_client_db._metadata = MetaData(bind=engine_client_db)
-    engine_client_db._metadata.reflect(engine_client_db) 
-
-    # Get columns from existing table
-    with engine_client_db.connect() as conn:
-        result = conn.execute(f"SELECT * FROM {src_table} LIMIT 1")
-    
-    columns_list = list(result._metadata.keys)
-
-    engine_client_db._metadata.tables[src_table].columns = [
-        i for i in engine_client_db._metadata.tables[src_table].columns if (i.name in columns_list)]
-    table_client_db = Table(src_table, engine_client_db._metadata)
-    
-    # Run paginate
-    query = session_original_db.query(table_client_db)
-
-    if per_page is not None:
-        query = query.limit(per_page)
-    if page is not None:
-        query = query.offset(page*per_page)
-
-    return [row._asdict() for row in query]
-    
 
 def create_model(db, table, columns):
 

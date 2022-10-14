@@ -11,7 +11,7 @@ from model.database_key_model import DatabaseKey
 
 from service.authenticate import jwt_required
 from service.rsa_service import generateKeys
-from service.database_service import show_database, copy_database_fc, create_model
+from service.database_service import copy_database_fc, create_model
 
 
 @ app.route('/getDatabases', methods=['GET'])
@@ -60,7 +60,9 @@ def addDatabase(current_user):
         db.session.flush()
     except:
         db.session.rollback()
-        return jsonify({'message': 'database_invalid_data'}), 400
+        return jsonify({
+            'message': 'database_invalid_data'
+        }), 400
 
     try:
         # Generate rsa keys and save them
@@ -152,54 +154,9 @@ def test_connection(current_user):
         }), 409
 
 
-@app.route('/showDatabase', methods=['POST'])
-@jwt_required
-def showDatabase(current_user):
-
-    try:
-        # Get name current user
-        name_current = current_user.name
-
-        # Get id of database to encrypt
-        id_db = request.json.get('id_db')
-
-        # Get database information by id
-        database = Database.query.filter_by(id=id_db).first()
-        result_database = database_share_schema.dump(database)
-
-        # Return error: database not found (404)
-        if not database:
-            return jsonify({'message': 'database_not_found'}), 404
-
-        # Return error: database does not belong to the user (401)
-        if database.id_user != current_user.id:
-            return jsonify({'message': 'user_unauthorized'}), 401
-
-        # Get database informations
-        db_type_name = ValidDatabase.query.filter_by(
-            id=result_database['id_db_type']
-        ).first().name
-
-        src_client_db_path = "{}://{}:{}@{}:{}/{}".format(
-            db_type_name, result_database['user'], result_database['password'],
-            result_database['host'], result_database['port'], result_database['name']
-        )
-
-        # Get data and show
-        result_query = show_database(
-            src_client_db_path=src_client_db_path, 
-            src_table=request.json.get('table'),
-            page=request.json.get('page'), per_page=request.json.get('per_page')
-        )
-    except:
-        return jsonify({'message': 'database_invalid_data'}), 400
-
-    return jsonify(result_query), 200
-
-
 @app.route('/columnsDatabase', methods=['POST'])
 @jwt_required
-def columnsDatabase(current_user):
+def columns_database(current_user):
     try:
         # Get id of database to encrypt
         id_db = request.json.get('id_db')
@@ -239,7 +196,7 @@ def columnsDatabase(current_user):
 
 @app.route('/tablesDatabase', methods=['POST'])
 @jwt_required
-def tablesDatabase(current_user):
+def tables_database(current_user):
     try:
         # Get id of database to encrypt
         id_db = request.json['id_db']
