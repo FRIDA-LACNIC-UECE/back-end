@@ -47,7 +47,7 @@ CREATE TABLE `anonymization_types`  (
 -- ----------------------------
 -- Records of anonymization_types
 -- ----------------------------
-
+INSERT INTO `anonymization_types` VALUES (1, 'ppcbtf');
 -- ----------------------------
 -- Table structure for anonymizations
 -- ----------------------------
@@ -145,5 +145,7 @@ CREATE TABLE `valid_databases`  (
 -- ----------------------------
 -- Records of valid_databases
 -- ----------------------------
+INSERT INTO `valid_databases` VALUES (1, 'mysql');
+INSERT INTO `valid_databases` VALUES (2, 'postgresql');
 
 SET FOREIGN_KEY_CHECKS = 1;
