@@ -82,7 +82,7 @@ def getUsers(current_user):
     return jsonify(result)
 
 
-@ app.route('/deleteUser', methods=['POST'])
+@ app.route('/deleteUser', methods=['DELETE'])
 @ jwt_required
 def deleteUser(current_user):
     
