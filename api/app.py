@@ -2,13 +2,13 @@ import os
 from flask import redirect
 from flask_migrate import Migrate
 
-from api.controller import (
+from controller import (
     app, db, database_controller, user_controller, 
     valid_database_controller, rsa_controller,
     anonymization_controller, anonymization_type_controller
 )
 
-from api.model import (
+from model import (
     anonymization_model, user_model, anonymization_type_model, valid_database_model, database_model, database_key_model
 )
     

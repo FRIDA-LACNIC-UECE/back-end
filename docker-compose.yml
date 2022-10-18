@@ -10,7 +10,7 @@ services:
       MYSQL_PASSWORD: 'larces132'
       MYSQL_ROOT_PASSWORD: 'larces132'
     ports:
-      - '5232:5232'
+      - '5232:3306'
     expose:
       - '5232'
     volumes:
@@ -19,7 +19,7 @@ services:
       - /tmp/public/mysqld:/var/run/mysqld
 
   api:
-    build: "./api"
+    build: ""
     image: backend-api
     container_name: api-container
     ports:
