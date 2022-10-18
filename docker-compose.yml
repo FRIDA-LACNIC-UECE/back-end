@@ -1,7 +1,8 @@
 services:
 
   db:
-    image: mysql:5.7
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
     restart: always
     container_name: db-container
     environment:
@@ -15,8 +16,6 @@ services:
       - '5232'
     volumes:
       - ./db/entrypoint:/docker-entrypoint-initdb.d
-      - /opt/public/mysql_data:/var/lib/mysql
-      - /tmp/public/mysqld:/var/run/mysqld
 
   api:
     build: ""
