@@ -1,6 +1,11 @@
 from flask import jsonify, request
 from sqlalchemy import create_engine
 
+from config import (
+    TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, 
+    HOST, PORT
+)
+
 from controller import app, db
 
 from model.database_model import Database, database_share_schema
@@ -41,9 +46,8 @@ def encrypt_database(current_user):
     )
 
     src_dest_db_path = "{}://{}:{}@{}:{}/{}".format(
-        db_type_name, result_database['user'], result_database['password'],
-        result_database['host'], result_database['port'], 
-        f"{result_database['name']}_{name_current}"
+        TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+        HOST, PORT, f"{result_database['name']}_cloud"
     )
 
     # Get tables names

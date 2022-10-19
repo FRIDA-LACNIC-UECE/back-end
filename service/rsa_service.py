@@ -6,6 +6,10 @@ from sqlalchemy import create_engine, MetaData, Table, select
 from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import Session
 
+from config import (
+    TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, 
+    HOST, PORT, NAME_DATABASE
+)
 
 def generateKeys():
     # Generating keys

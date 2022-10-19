@@ -51,7 +51,7 @@ def login():
         return jsonify({'message': 'user_invalid_data'}), 400
 
     return jsonify({
-        'message': 'Logged successfully!',
+        'message': 'user_logged',
         'is_admin': user.is_admin,
         'token': token
     })

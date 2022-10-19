@@ -34,7 +34,7 @@ def getDatabases(current_user):
                     database['name_db_type'] = type['name']
     except:
         return jsonify({
-            'message': 'database_invalid_data'
+            'message': 'databases_invalid_data'
         }), 400
 
     return jsonify(result_databases), 200
