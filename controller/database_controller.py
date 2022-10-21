@@ -140,8 +140,8 @@ def test_connection(current_user):
 
             if database_exists(engine.url):
                 return jsonify({'message': 'database_connected'}), 200
-            else:
-                return jsonify({'message': 'database_not_connected'}), 409
+
+            return jsonify({'message': 'database_not_connected'}), 409
 
         db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
         src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
@@ -150,18 +150,11 @@ def test_connection(current_user):
         engine = create_engine(src_client_db_path)
 
         if database_exists(engine.url):
-            return jsonify({
-                'message': 'database_connected'
-            }), 200
-        else:
-            return jsonify({
-            'message': 'database_not_connected'
-        }), 409
-        
+            return jsonify({'message': 'database_connected'}), 200
+    
+        return jsonify({'message': 'database_not_connected'}), 409 
     except:
-        return jsonify({
-            'message': 'database_not_connected'
-        }), 409
+        return jsonify({'message': 'database_not_connected'}), 409
 
 
 @app.route('/showDatabase', methods=['POST'])
