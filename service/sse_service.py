@@ -86,14 +86,8 @@ def show_hash_rows(src_cloud_db_path, src_table, page=0, per_page=100):
     engine_cloud_db._metadata = MetaData(bind=engine_cloud_db)
     engine_cloud_db._metadata.reflect(engine_cloud_db) 
 
-    # Get columns from existing table
-    with engine_cloud_db.connect() as conn:
-        result = conn.execute(f"SELECT * FROM {src_table} LIMIT 1")
-    
-    columns_list = list(result._metadata.keys)
-
     engine_cloud_db._metadata.tables[src_table].columns = [
-        i for i in engine_cloud_db._metadata.tables[src_table].columns if (i.name in columns_list)]
+        i for i in engine_cloud_db._metadata.tables[src_table].columns if (i.name in ['id', 'line_hash'])]
     table_client_db = Table(src_table, engine_cloud_db._metadata)
     
     # Run paginate
