@@ -1,29 +1,100 @@
 from flask import jsonify, request
 
+from config import (
+    TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, 
+    HOST, PORT
+)
+
+from model.database_model import Database, database_share_schema
+from model.valid_database_model import ValidDatabase
+
 from controller import app, db
 
 from service.authenticate import jwt_required
+from service.sse_service import include_column_hash, show_hash_rows
 from service import sse_service
 
 
-@ app.route('/include_column_hash', methods=['GET'])
-def include_column_hash():
+
+@ app.route('/includeColumnHash', methods=['POST'])
+@ jwt_required
+def includeColumnHash(current_user):
     try:
-        src_db_cloud = request.json.get('src_db_cloud')
-        src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
-                                                src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
+        # Get name current user
+        name_current = current_user.name
 
-        src_table = src_db_cloud['table']
+        # Get id of database to encrypt
+        id_db = request.json.get('id_db')
 
-        src_db_user = request.json.get('src_db_user')
-        src_db_user_path = "{}://{}:{}@{}:{}/{}".format(src_db_user['type'], src_db_user['user'],
-                                                src_db_user['password'], src_db_user['ip'], src_db_user['port'], src_db_user['name'])
+        # Get database information by id
+        database = Database.query.filter_by(id=id_db).first()
+        result_database = database_share_schema.dump(database)
 
-        sse_service.include_column_hash(src_db_cloud_path, src_db_user_path, src_table)
+        if not database:
+            return jsonify({'message': 'database_not_found'}), 404
+
+        if database.id_user != current_user.id:
+            return jsonify({'message': 'user_unauthorized'}), 401
+        
+        db_type_name = ValidDatabase.query.filter_by(
+            id=result_database['id_db_type']
+        ).first().name
+
+        src_db_user_path = "{}://{}:{}@{}:{}/{}".format(
+            db_type_name, result_database['user'], result_database['password'],
+            result_database['host'], result_database['port'], "UserDB"
+        )
+
+        src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(
+            TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+            HOST, PORT, f"{result_database['name']}_cloud"
+        )
+
+        include_column_hash(src_db_cloud_path, src_db_user_path, request.json.get('table'))
+        
+        return jsonify({'message': 'hash_included'}), 200
     except:
         return jsonify({'message': 'hash_not_included'}), 400
 
-    return jsonify({'message': 'hash_included'}), 200
+
+@app.route('/showHashRows', methods=['POST'])
+@jwt_required
+def showHashRows(current_user):
+
+    try:
+        # Get name current user
+        name_current = current_user.name
+
+        # Get id of database to encrypt
+        id_db = request.json.get('id_db')
+
+        # Get database information by id
+        database = Database.query.filter_by(id=id_db).first()
+        result_database = database_share_schema.dump(database)
+
+        # Return error: database not found (404)
+        if not database:
+            return jsonify({'message': 'database_not_found'}), 404
+
+        # Return error: database does not belong to the user (401)
+        if database.id_user != current_user.id:
+            return jsonify({'message': 'user_unauthorized'}), 401
+
+        src_cloud_db_path = "{}://{}:{}@{}:{}/{}".format(
+            TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+            HOST, PORT, f"{result_database['name']}_cloud"
+        )
+
+        # Get data and show
+        result_query = show_hash_rows(
+            src_cloud_db_path=src_cloud_db_path, 
+            src_table=request.json.get('table'),
+            page=request.json.get('page'), per_page=request.json.get('per_page')
+        )
+    except:
+        return jsonify({'message': 'database_invalid_data'}), 400
+
+    return jsonify(result_query), 200
 
 
 @ app.route('/row_by_hash', methods=['GET'])

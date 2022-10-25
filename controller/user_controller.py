@@ -60,7 +60,11 @@ def login():
 @ app.route('/getUser', methods=['GET'])
 @ jwt_required
 def getUser(current_user):
-    return jsonify(user_share_schema.dump(current_user))
+    try:
+        return jsonify(user_share_schema.dump(current_user)), 200
+    except:
+        return jsonify({'message': 'user_invalid_data'}), 400
+    
 
 
 @ app.route('/getUsers', methods=['GET'])

@@ -2,7 +2,8 @@ from sqlalchemy import (
     create_engine, MetaData, Table, 
     select, update
 )
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
+
 from service import rsa_service
 
 
@@ -40,11 +41,14 @@ def include_column_hash(src_db_cloud_path, src_db_user_path, src_table):
     srcTableUser = Table(src_table, srcEngineUser._metadata)
     sourceSessionUser = SourceSessionUser()
     
-    first_line = sourceSessionCloud.query(srcTableCloud).first()
-    print(first_line)
+    first_line_cloud = sourceSessionCloud.query(srcTableCloud).first()
+    print(first_line_cloud)
+
+    first_line_user = sourceSessionUser.query(srcTableUser).first()
+    print(first_line_user)
 
     # First id available
-    id = first_line.id
+    id = first_line_cloud.id
 
     size = 1000
     statement = select(srcTableUser)
@@ -70,6 +74,38 @@ def include_column_hash(src_db_cloud_path, src_db_user_path, src_table):
 
     return
 
+
+def show_hash_rows(src_cloud_db_path, src_table, page=0, per_page=100):
+    
+    # Creating connection with original database
+    engine_cloud_db = create_engine(src_cloud_db_path)
+    session_cloud_db = Session(engine_cloud_db)
+
+    # Create engine, reflect existing columns, and create table object for oldTable
+    # change this for your source database
+    engine_cloud_db._metadata = MetaData(bind=engine_cloud_db)
+    engine_cloud_db._metadata.reflect(engine_cloud_db) 
+
+    # Get columns from existing table
+    with engine_cloud_db.connect() as conn:
+        result = conn.execute(f"SELECT * FROM {src_table} LIMIT 1")
+    
+    columns_list = list(result._metadata.keys)
+
+    engine_cloud_db._metadata.tables[src_table].columns = [
+        i for i in engine_cloud_db._metadata.tables[src_table].columns if (i.name in columns_list)]
+    table_client_db = Table(src_table, engine_cloud_db._metadata)
+    
+    # Run paginate
+    query = session_cloud_db.query(table_client_db)
+
+    if per_page is not None:
+        query = query.limit(per_page)
+    if page is not None:
+        query = query.offset(page*per_page)
+
+    return [row._asdict() for row in query]
+    
 
 def line_by_hash(src_db_cloud_path, src_table, hash):
 

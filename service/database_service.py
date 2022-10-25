@@ -34,7 +34,7 @@ def show_database(src_client_db_path, src_table, page=0, per_page=100):
         query = query.offset(page*per_page)
 
     return [row._asdict() for row in query]
-    
+
 
 def create_model(db, table, columns):
 

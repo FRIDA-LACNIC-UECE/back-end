@@ -3,6 +3,11 @@ from sqlalchemy import create_engine
 from sqlalchemy_utils import database_exists
 from sqlalchemy import create_engine, inspect
 
+from config import (
+    TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, 
+    HOST, PORT
+)
+
 from controller import app, db
 
 from model.database_model import Database, database_share_schema, databases_share_schema
@@ -11,7 +16,7 @@ from model.database_key_model import DatabaseKey
 
 from service.authenticate import jwt_required
 from service.rsa_service import generateKeys
-from service.database_service import show_database, copy_database_fc, create_model
+from service.database_service import show_database
 
 
 @ app.route('/getDatabases', methods=['GET'])
@@ -106,15 +111,15 @@ def deleteDatabase(current_user):
         result = database_share_schema.dump(
             Database.query.filter_by(id=id).first()
         )
+
+        if not result:
+            return jsonify({'message': 'database_deleted'}), 200
+        else:
+            return jsonify({'message': 'database_not_deleted'}), 500
     except:
         return jsonify({
             'message': 'database_not_deleted'
         }), 500
-
-    if not result:
-        return jsonify({'message': 'database_deleted'}), 200
-    else:
-        return jsonify({'message': 'database_not_deleted'}), 500
 
 
 @app.route('/testConnectionDatabase', methods=['POST'])
