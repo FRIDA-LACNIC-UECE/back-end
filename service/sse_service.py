@@ -75,7 +75,7 @@ def include_column_hash(src_db_cloud_path, src_db_user_path, src_table):
     return
 
 
-def show_hash_rows(src_cloud_db_path, src_table, page=0, per_page=100):
+def show_hash_rows(src_cloud_db_path, src_table, page, per_page):
     
     # Creating connection with original database
     engine_cloud_db = create_engine(src_cloud_db_path)
@@ -91,14 +91,18 @@ def show_hash_rows(src_cloud_db_path, src_table, page=0, per_page=100):
     table_client_db = Table(src_table, engine_cloud_db._metadata)
     
     # Run paginate
-    query = session_cloud_db.query(table_client_db)
+    query = session_cloud_db.query(
+        table_client_db
+    ).filter(
+        table_client_db.c[0] >= (page*per_page), 
+        table_client_db.c[0] <= ((page+1)*per_page)
+    )
 
-    if per_page is not None:
-        query = query.limit(per_page)
-    if page is not None:
-        query = query.offset(page*per_page)
+    results = {}
+    for row in query:
+        results[f"{row[0]}"] = row[1]
 
-    return [row._asdict() for row in query]
+    return results
     
 
 def line_by_hash(src_db_cloud_path, src_table, hash):
