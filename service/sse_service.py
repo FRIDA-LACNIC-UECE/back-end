@@ -99,8 +99,11 @@ def show_hash_rows(src_cloud_db_path, src_table, page, per_page):
     )
 
     results = {}
+    results['primary_key'] = []
+    results['row_hash'] = []
     for row in query:
-        results[f"{row[0]}"] = row[1]
+        results['primary_key'].append(row[0])
+        results['row_hash'].append(row[1])
 
     return results
     
