@@ -106,6 +106,34 @@ def show_hash_rows(src_cloud_db_path, src_table, page, per_page):
         results['row_hash'].append(row[1])
 
     return results
+
+
+def delete_hash_rows(src_cloud_db_path, src_table, primary_key_list):
+    
+    # Creating connection with original database
+    engine_cloud_db = create_engine(src_cloud_db_path)
+    session_cloud_db = Session(engine_cloud_db)
+
+    # Create engine, reflect existing columns, and create table object for oldTable
+    # change this for your source database
+    engine_cloud_db._metadata = MetaData(bind=engine_cloud_db)
+    engine_cloud_db._metadata.reflect(engine_cloud_db) 
+
+    engine_cloud_db._metadata.tables[src_table].columns = [
+        i for i in engine_cloud_db._metadata.tables[src_table].columns if (i.name in ['id', 'line_hash'])]
+    table_cloud_db = Table(src_table, engine_cloud_db._metadata)
+
+    for primary_key in primary_key_list:
+        session_cloud_db.query(
+            table_cloud_db
+        ).filter(
+            table_cloud_db.c[0] == primary_key
+        ).delete()
+    
+    session_cloud_db.commit()
+    session_cloud_db.close()
+
+    return 200
     
 
 def line_by_hash(src_db_cloud_path, src_table, hash):

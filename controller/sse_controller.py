@@ -11,9 +11,8 @@ from model.valid_database_model import ValidDatabase
 from controller import app, db
 
 from service.authenticate import jwt_required
-from service.sse_service import include_column_hash, show_hash_rows
+from service.sse_service import include_column_hash, show_hash_rows, delete_hash_rows
 from service import sse_service
-
 
 
 @ app.route('/includeColumnHash', methods=['POST'])
@@ -92,6 +91,48 @@ def showHashRows(current_user):
     )
 
     return jsonify(result_query), 200
+
+
+@app.route('/deleteRowsHash', methods=['POST'])
+@jwt_required
+def deleteHashRows(current_user):
+
+    # Get name current user
+    name_current = current_user.name
+
+    # Get id of database to encrypt
+    id_db = request.json.get('id_db')
+
+    # Get database information by id
+    database = Database.query.filter_by(id=id_db).first()
+    result_database = database_share_schema.dump(database)
+
+    # Return error: database not found (404)
+    if not database:
+        return jsonify({'message': 'database_not_found'}), 404
+
+    # Return error: database does not belong to the user (401)
+    if database.id_user != current_user.id:
+        return jsonify({'message': 'user_unauthorized'}), 401
+
+    src_cloud_db_path = "{}://{}:{}@{}:{}/{}".format(
+        TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+        HOST, PORT, f"{result_database['name']}_cloud"
+    )
+
+    primary_key_list = request.json.get('primary_key_list')
+
+    if primary_key_list == None or len(primary_key_list) == 0:
+        return jsonify({'message': 'primary_key_list_invalid_data'}), 400
+
+    # Get data and show
+    result_query = delete_hash_rows(
+        src_cloud_db_path=src_cloud_db_path, 
+        src_table=request.json.get('table'),
+        primary_key_list=primary_key_list
+    )
+
+    return jsonify({'message': 'delete_rows_hash_deleted'}), 200
 
 
 @ app.route('/row_by_hash', methods=['GET'])
