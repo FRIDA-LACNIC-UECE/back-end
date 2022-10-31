@@ -267,12 +267,12 @@ def tablesDatabase(current_user):
 
         # Create connection to database
         engine_db = create_engine(src_db_path)
+
+        return jsonify({"tables": list(engine_db.table_names())}), 200
     except:
         return jsonify({
             'message': 'database_invalid_data'
         }), 400
-
-    return jsonify({"tables": list(engine_db.table_names())}), 200
    
 
 '''@ app.route('/copy_database', methods=['GET'])
