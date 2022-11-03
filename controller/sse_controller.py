@@ -11,8 +11,46 @@ from model.valid_database_model import ValidDatabase
 from controller import app, db
 
 from service.authenticate import jwt_required
-from service.sse_service import include_column_hash, show_hash_rows, delete_hash_rows
+from service.sse_service import (
+    include_column_hash, show_hash_rows, 
+    include_hash_rows, delete_hash_rows
+)
 from service import sse_service
+
+
+@ app.route('/includeHashRows', methods=['POST'])
+@ jwt_required
+def includeHashRows(current_user):
+    try:
+        # Get name current user
+        name_current = current_user.name
+
+        # Get id of database to encrypt
+        id_db = request.json.get('id_db')
+
+        # Get database information by id
+        database = Database.query.filter_by(id=id_db).first()
+        result_database = database_share_schema.dump(database)
+
+        if not database:
+            return jsonify({'message': 'database_not_found'}), 404
+
+        if database.id_user != current_user.id:
+            return jsonify({'message': 'user_unauthorized'}), 401
+
+        src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(
+            TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+            HOST, PORT, f"{result_database['name']}_cloud"
+        )
+
+        include_hash_rows(
+            src_db_cloud_path, request.json.get('table'), 
+            request.json.get('hash_rows')
+        )
+        
+        return jsonify({'message': 'hash_included'}), 200
+    except:
+        return jsonify({'message': 'hash_not_included'}), 400
 
 
 @ app.route('/includeColumnHash', methods=['POST'])

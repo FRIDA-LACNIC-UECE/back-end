@@ -7,6 +7,43 @@ from sqlalchemy.orm import sessionmaker, Session
 from service import rsa_service
 
 
+def include_hash_rows(src_db_cloud_path, src_table, hash_rows):
+    
+    # Creating connection with client database
+    srcEngineCloud = create_engine(src_db_cloud_path)
+    connectionCloud= srcEngineCloud.connect()
+
+    # Adding "_index" into table name of cloud database
+    cloud_table = src_table
+
+    # Getting columns names of client database
+    result = connectionCloud.execute(f"SELECT * FROM {cloud_table}")
+    columns_list = list(result.keys())
+
+    # create engine, reflect existing columns, and create table object for oldTable
+    # change this for your source database
+    SourceSessionCloud = sessionmaker(srcEngineCloud)
+    srcEngineCloud._metadata = MetaData(bind=srcEngineCloud)
+    srcEngineCloud._metadata.reflect(srcEngineCloud)  # get columns from existing table
+    srcEngineCloud._metadata.tables[cloud_table].columns = [
+        i for i in srcEngineCloud._metadata.tables[f"{cloud_table}"].columns if (i.name in columns_list)]
+    srcTableCloud= Table(cloud_table, srcEngineCloud._metadata)
+    sourceSessionCloud = SourceSessionCloud()
+   
+    for row in hash_rows:
+        statement = (
+            update(srcTableCloud).
+            where(srcTableCloud.c[0] == row['id']).
+            values(line_hash=row["line_hash"])
+        )
+
+        sourceSessionCloud.execute(statement)
+    
+    sourceSessionCloud.commit()
+
+    return
+
+
 def include_column_hash(src_db_cloud_path, src_db_user_path, src_table):
     
     # Creating connection with client database
