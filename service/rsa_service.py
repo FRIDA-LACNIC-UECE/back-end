@@ -77,6 +77,33 @@ def dencrypt_list(data_list, key):
     return decrypted_list
 
 
+def encrypt_database_rows(rows_to_encrypt, src_dest_db_path, src_table, publicKeyStr, privateKeyStr):
+
+    # Load rsa keys
+    publicKey, privateKey = loadKeys(publicKeyStr, privateKeyStr)
+
+    # Creating connection with dest database
+    connection_dest_db = create_engine(src_dest_db_path).connect()
+
+    # Create dataframe with data original database
+    dataframe_db = pd.DataFrame(rows_to_encrypt)
+
+    # Create name_columns without id
+    columns_list = list(dataframe_db.columns)
+    names_columns = columns_list.copy()
+    names_columns.remove('id')
+
+    # Encrypt each column
+    for column in names_columns:
+        dataframe_db[column] = encrypt_list(list(dataframe_db[column]), publicKey)
+
+    # Add column hash
+    dataframe_db['line_hash'] = [None] * len(dataframe_db)    
+
+    # Send data to database
+    dataframe_db.to_sql(src_table, connection_dest_db, if_exists='append', index=False)
+
+
 def encrypt_database(src_original_db_path, src_dest_db_path, src_table, columns_list, size_batch, publicKeyStr, privateKeyStr):
     
     # Create dest database on cloud
