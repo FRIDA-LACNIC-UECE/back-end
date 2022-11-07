@@ -1,6 +1,6 @@
 from sqlalchemy import (
     create_engine, MetaData, Table, 
-    select, update
+    select, update, func
 )
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -125,14 +125,17 @@ def show_hash_rows(src_cloud_db_path, src_table, page, per_page):
 
     engine_cloud_db._metadata.tables[src_table].columns = [
         i for i in engine_cloud_db._metadata.tables[src_table].columns if (i.name in ['id', 'line_hash'])]
-    table_client_db = Table(src_table, engine_cloud_db._metadata)
+    table_cloud_db = Table(src_table, engine_cloud_db._metadata)
+
+    primary_key_value_min_limit = session_cloud_db.query(func.min(table_cloud_db.c[0])).scalar()
+    primary_key_value_max_limit = session_cloud_db.query(func.max(table_cloud_db.c[0])).scalar()
     
     # Run paginate
     query = session_cloud_db.query(
-        table_client_db
+        table_cloud_db
     ).filter(
-        table_client_db.c[0] >= (page*per_page), 
-        table_client_db.c[0] <= ((page+1)*per_page)
+        table_cloud_db.c[0] >= primary_key_value_min_limit + (page * per_page), 
+        table_cloud_db.c[0] <= primary_key_value_min_limit + ((page + 1) *per_page)
     )
 
     results = {}
@@ -142,7 +145,10 @@ def show_hash_rows(src_cloud_db_path, src_table, page, per_page):
         results['primary_key'].append(row[0])
         results['row_hash'].append(row[1])
 
-    return results
+    session_cloud_db.commit()
+    session_cloud_db.close()
+
+    return results, primary_key_value_min_limit, primary_key_value_max_limit
 
 
 def insert_hash_rows(src_cloud_db_path, src_table, primary_key_list):

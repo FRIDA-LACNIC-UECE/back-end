@@ -4,29 +4,54 @@ from sqlalchemy import (MetaData, Table, create_engine, inspect)
 from sqlalchemy.orm import sessionmaker, Session
 
 
-def show_database(src_client_db_path, src_table, page=0, per_page=100):
+def get_columns_database(engine_db, table_name):
+    columns_list = []
+    insp = inspect(engine_db)
+    columns_table = insp.get_columns(table_name)
 
-    # Creating connection with original database
-    engine_client_db = create_engine(src_client_db_path)
-    session_original_db = Session(engine_client_db)
+    for c in columns_table :
+        columns_list.append(str(c['name']))
 
-    # Create engine, reflect existing columns, and create table object for oldTable
-    # change this for your source database
-    engine_client_db._metadata = MetaData(bind=engine_client_db)
-    engine_client_db._metadata.reflect(engine_client_db) 
+    return columns_list
+
+
+def get_primary_key(src_db_path, table_name):
+
+    table_object_db, _ = create_table_session(src_db_path, table_name)
+    
+    return [key.name for key in inspect(table_object_db).primary_key][0]
+
+
+def create_table_session(src_db_path, table_name, columns_list=None):
+    # Create engine, reflect existing columns
+    engine_db = create_engine(src_db_path)
+    engine_db._metadata = MetaData(bind=engine_db)
 
     # Get columns from existing table
-    with engine_client_db.connect() as conn:
-        result = conn.execute(f"SELECT * FROM {src_table} LIMIT 1")
+    engine_db._metadata.reflect(engine_db)
     
-    columns_list = list(result._metadata.keys)
+    if columns_list == None:
+        columns_list = get_columns_database(engine_db, table_name)
 
-    engine_client_db._metadata.tables[src_table].columns = [
-        i for i in engine_client_db._metadata.tables[src_table].columns if (i.name in columns_list)]
-    table_client_db = Table(src_table, engine_client_db._metadata)
+    engine_db._metadata.tables[table_name].columns = [
+        i for i in engine_db._metadata.tables[table_name].columns if (i.name in columns_list)
+    ]
+    
+    # Create table object of Client Database
+    table_object_db = Table(table_name, engine_db._metadata)
+
+    # Create session of Client Database to run sql operations
+    session_db = Session(engine_db)
+
+    return table_object_db, session_db
+
+
+def show_database(src_db_path, table_name, page=0, per_page=100):
+
+    table_object_db, session_db = create_table_session(src_db_path, table_name)
     
     # Run paginate
-    query = session_original_db.query(table_client_db)
+    query = session_db.query(table_object_db)
 
     if per_page is not None:
         query = query.limit(per_page)

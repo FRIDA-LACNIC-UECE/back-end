@@ -16,7 +16,7 @@ from model.database_key_model import DatabaseKey
 
 from service.authenticate import jwt_required
 from service.rsa_service import generateKeys
-from service.database_service import show_database
+from service.database_service import show_database, get_primary_key
 
 
 @ app.route('/getDatabases', methods=['GET'])
@@ -117,9 +117,7 @@ def deleteDatabase(current_user):
         else:
             return jsonify({'message': 'database_not_deleted'}), 500
     except:
-        return jsonify({
-            'message': 'database_not_deleted'
-        }), 500
+        return jsonify({'message': 'database_not_deleted'}), 500
 
 
 @app.route('/testConnectionDatabase', methods=['POST'])
@@ -207,6 +205,34 @@ def showDatabase(current_user):
     return jsonify(result_query), 200
 
 
+@app.route('/tablesDatabase', methods=['POST'])
+@jwt_required
+def tablesDatabase(current_user):
+    try:
+        # Get id of database to encrypt
+        id_db = request.json['id_db']
+
+        # Get database path by id
+        result_database = database_share_schema.dump(
+            Database.query.filter_by(id=id_db).first()
+        )
+
+        if not result_database:
+            return jsonify({'message': 'database_not_found'}), 404
+
+        db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
+        src_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+
+        # Create connection to database
+        engine_db = create_engine(src_db_path)
+
+        return jsonify({"tables": list(engine_db.table_names())}), 200
+    except:
+        return jsonify({
+            'message': 'database_invalid_data'
+        }), 400
+
+
 @app.route('/columnsDatabase', methods=['POST'])
 @jwt_required
 def columnsDatabase(current_user):
@@ -247,14 +273,14 @@ def columnsDatabase(current_user):
     return jsonify(columns), 200
 
 
-@app.route('/tablesDatabase', methods=['POST'])
+@app.route('/getPrimaryKey', methods=['GET'])
 @jwt_required
-def tablesDatabase(current_user):
+def getPrimaryKey(current_user):
     try:
         # Get id of database to encrypt
-        id_db = request.json['id_db']
+        id_db = request.json.get('id_db')
 
-        # Get database path by id
+        # Get database information by id
         result_database = database_share_schema.dump(
             Database.query.filter_by(id=id_db).first()
         )
@@ -265,14 +291,13 @@ def tablesDatabase(current_user):
         db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
         src_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
 
-        # Create connection to database
-        engine_db = create_engine(src_db_path)
+        # Get table name
+        table_name = request.json.get('table')
 
-        return jsonify({"tables": list(engine_db.table_names())}), 200
+
+        return jsonify({"primary_key": get_primary_key(src_db_path, table_name)}), 200
     except:
-        return jsonify({
-            'message': 'database_invalid_data'
-        }), 400
+        return jsonify({'message': 'database_invalid_data'}), 400
    
 
 '''@ app.route('/copy_database', methods=['GET'])

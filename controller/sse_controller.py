@@ -122,13 +122,17 @@ def showHashRows(current_user):
     )
 
     # Get data and show
-    result_query = show_hash_rows(
+    result_query, primary_key_value_min_limit, primary_key_value_max_limit = show_hash_rows(
         src_cloud_db_path=src_cloud_db_path, 
         src_table=request.json.get('table'),
         page=request.json.get('page'), per_page=request.json.get('per_page')
     )
 
-    return jsonify(result_query), 200
+    return jsonify({
+        'result_query': result_query,
+        'primary_key_value_min_limit': primary_key_value_min_limit,
+        'primary_key_value_max_limit': primary_key_value_max_limit,
+    }), 200
 
 
 @app.route('/deleteRowsHash', methods=['POST'])

@@ -1,62 +1,124 @@
 import numpy as np
 import pandas as pd
 import scipy.linalg as la
-from sqlalchemy import MetaData, Table, create_engine
+from sqlalchemy import MetaData, Table, create_engine, select
 from sqlalchemy.orm import sessionmaker
 
+from database_service import get_primary_key, create_table_session
 
-def anonymization_database(src_db_client_path, src_table, columns_to_anonymization):
 
-    # Add id column
-    columns_to_anonymization.insert(0, "id")
+def anonymization_database_rows(src_client_db_path, table_name, columns_to_anonymization, rows_to_anonymization):
 
-    # create engine, reflect existing columns, and create table object for oldTable
-    # change this for your source database
-    srcEngineClient = create_engine(src_db_client_path)
-    SourceSessionClient = sessionmaker(srcEngineClient)
-    srcEngineClient._metadata = MetaData(bind=srcEngineClient)
-    srcEngineClient._metadata.reflect(srcEngineClient)  # get columns from existing table
-    srcEngineClient._metadata.tables[src_table].columns = [
-        i for i in srcEngineClient._metadata.tables[src_table].columns if (i.name in columns_to_anonymization)]
-    srcTableClient = Table(src_table, srcEngineClient._metadata)
-    sourceSessionClient = SourceSessionClient()
+    #Get primary key of Client Database
+    primary_key = get_primary_key(src_client_db_path, table_name)
+
+    # Get primary key of Client Database in columns_to_anonymization only query
+    columns_to_anonymization.insert(0, primary_key)
+
+    # Create table object of Client Database and 
+    # session of Client Database to run sql operations
+    table_client_db, session_client_db = create_table_session(
+        src_db_path=src_client_db_path, 
+        table_name=table_name, 
+        columns_list=columns_to_anonymization
+    )
     
-    # Get data in database
-    query_client = sourceSessionClient.query(srcTableClient).all()
-    result = pd.DataFrame(data=query_client, columns=columns_to_anonymization)
-
-    # Remove id
-    save_id = result['id']
-    print(result)
-    result = result.drop('id', axis=1)
-    columns_to_anonymization.remove('id')
+    # Transform rows database to dataframe
+    dataframe_to_anonymization = pd.DataFrame(
+        data=rows_to_anonymization
+    )
+    dataframe_to_anonymization = dataframe_to_anonymization[columns_to_anonymization]
+   
+    # Remove primary key of columns_to_anonymization list
+    # but save elements in save_primary_key_elements
+    save_primary_key_elements = dataframe_to_anonymization[primary_key]
+    dataframe_to_anonymization = dataframe_to_anonymization.drop(primary_key, axis=1)
+    columns_to_anonymization.remove(primary_key)
 
     # Run anonymization
-    result_anonymization = result[columns_to_anonymization].astype('int')
-    result_anonymization = result_anonymization.to_numpy()
-    result_anonymization = anonymization_data(result_anonymization)
-    result[columns_to_anonymization] = pd.DataFrame(data=result_anonymization, columns=columns_to_anonymization)
+    anonymization_dataframe = dataframe_to_anonymization[
+        columns_to_anonymization
+    ].astype('int')
+    anonymization_dataframe = anonymization_dataframe.to_numpy()
+    anonymization_dataframe = anonymization_data(anonymization_dataframe)
+    anonymization_dataframe = pd.DataFrame(
+        data=anonymization_dataframe, 
+        columns=columns_to_anonymization
+    )
     
-    # Reorganize id
-    result.index = save_id
-    print(result)
-    dictionary_update_data = result.to_dict(orient='records')
-    first_line = sourceSessionClient.query(srcTableClient).first()
-    id = first_line.id
-    print(first_line)
+    # Reorganize primary key elements
+    anonymization_dataframe[f"{primary_key}"] = save_primary_key_elements
 
-    sourceSessionClient.commit()
-    sourceSessionClient.close()
+    # Get anonymized data to update
+    dictionary_anonymized_data = anonymization_dataframe.to_dict(orient='records')
+    print(dictionary_anonymized_data)
 
-    # Update data anonymization
-    for row_update in dictionary_update_data:
-        print(row_update)
-        sourceSessionClient.query(srcTableClient).\
-        filter(srcTableClient.c[0] == id).\
-        update(row_update)
-        id += 1
+    # Update data
+    for row_anonymized in dictionary_anonymized_data:
+        session_client_db.query(table_client_db).\
+        filter(table_client_db.c[0] == row_anonymized[f'{primary_key}']).\
+        update(row_anonymized)
 
-    sourceSessionClient.commit()
+    session_client_db.commit()
+    session_client_db.close()
+
+
+def anonymization_database(src_client_db_path, table_name, columns_to_anonymization):
+
+    #Get primary key of Client Database
+    primary_key = get_primary_key(src_client_db_path, table_name)
+
+    # Get primary key of Client Database in columns_to_anonymization only query
+    columns_to_anonymization.insert(0, primary_key)
+
+    # Create table object of Client Database and 
+    # session of Client Database to run sql operations
+    table_client_db, session_client_db = create_table_session(
+        src_db_path=src_client_db_path, 
+        table_name=table_name,
+        columns_list=columns_to_anonymization
+    )
+        
+    # Get data to dataframe
+    from_dataframe = session_client_db.query(table_client_db).all()
+    
+    # Transform rows database to dataframe
+    dataframe_to_anonymization = pd.DataFrame(
+        data=from_dataframe,
+        columns=columns_to_anonymization
+    )
+    dataframe_to_anonymization = dataframe_to_anonymization[columns_to_anonymization]
+
+    print(dataframe_to_anonymization)
+
+    # Remove primary key of columns_to_anonymization list
+    # but save elements in save_primary_key_elements
+    save_primary_key_elements = dataframe_to_anonymization[primary_key]
+    dataframe_to_anonymization = dataframe_to_anonymization.drop(primary_key, axis=1)
+    columns_to_anonymization.remove(primary_key)
+
+    # Run anonymization
+    anonymization_dataframe = dataframe_to_anonymization[columns_to_anonymization].astype('int')
+    anonymization_dataframe = anonymization_dataframe.to_numpy()
+    anonymization_dataframe = anonymization_data(anonymization_dataframe)
+    anonymization_dataframe = pd.DataFrame(data=anonymization_dataframe, columns=columns_to_anonymization)
+    
+    # Reorganize primary key elements
+    anonymization_dataframe[f"{primary_key}"] = save_primary_key_elements
+
+    # Get anonymized data to update
+    dictionary_anonymized_data = anonymization_dataframe.to_dict(orient='records')
+    print(dictionary_anonymized_data)
+
+    # Update data
+    for row_anonymized in dictionary_anonymized_data:
+        session_client_db.query(table_client_db).\
+        filter(table_client_db.c[0] == row_anonymized[f'{primary_key}']).\
+        update(row_anonymized)
+
+    # Commit changes
+    session_client_db.commit()
+    session_client_db.close()
 
 
 def anonymization_data(data):
@@ -96,3 +158,102 @@ def anonymization_data(data):
     data_original_dimension += mean
 
     return data_original_dimension
+
+
+if __name__ == "__main__":
+    src_client_db_path = "mysql://root:Dd16012018@localhost:3306/fake_db"
+    table_name = 'nivel1'
+    columns_to_anonymization = ["rg", "cpf"]
+
+    # Get primary key of Client Database
+    primary_key = get_primary_key(src_client_db_path, table_name)
+
+    # Create table object of Client Database and 
+    # session of Client Database to run sql operations
+    table_client_db, session_client_db = create_table_session(
+        src_client_db_path, table_name
+    )
+
+    # Get data in database
+    rows_to_anonymization = session_client_db.query(table_client_db).all()
+
+    anonymization_database(
+        src_client_db_path,
+        table_name,
+        columns_to_anonymization
+    )
+
+
+'''def anonymization_database(src_client_db_path, table_name, columns_to_anonymization):
+
+    #Get primary key of Client Database
+    primary_key = get_primary_key(src_client_db_path, table_name)
+
+    # Get primary key of Client Database in columns_to_anonymization only query
+    columns_to_anonymization.insert(0, primary_key)
+
+    # Create table object of Client Database and 
+    # session of Client Database to run sql operations
+    table_client_db, session_client_db = create_table_session(
+        src_db_path=src_client_db_path, 
+        table_name=table_name,
+        columns_list=columns_to_anonymization
+    )
+    
+    # Run anonymization
+    query_size = 1000
+    statement = select(table_client_db)
+    proxy_client_database = session_client_db.execute(statement) # Proxy to get data on batch
+    results_query_client_database = proxy_client_database.fetchmany(query_size) # Getting data
+    
+    while results_query_client_database:
+        # Get data to dataframe
+        from_dataframe = []
+
+        for row in results_query_client_database:
+            from_dataframe.append(row)
+
+        # Transform rows database to dataframe
+        dataframe_to_anonymization = pd.DataFrame(
+            data=from_dataframe,
+            columns=columns_to_anonymization
+        )
+        dataframe_to_anonymization = dataframe_to_anonymization[columns_to_anonymization]
+
+        print(dataframe_to_anonymization)
+    
+        # Remove primary key of columns_to_anonymization list
+        # but save elements in save_primary_key_elements
+        save_primary_key_elements = dataframe_to_anonymization[primary_key]
+        dataframe_to_anonymization = dataframe_to_anonymization.drop(primary_key, axis=1)
+        columns_to_anonymization.remove(primary_key)
+
+        # Run anonymization
+        anonymization_dataframe = dataframe_to_anonymization[columns_to_anonymization].astype('int')
+        anonymization_dataframe = anonymization_dataframe.to_numpy()
+        anonymization_dataframe = anonymization_data(anonymization_dataframe)
+        anonymization_dataframe = pd.DataFrame(data=anonymization_dataframe, columns=columns_to_anonymization)
+        
+        # Reorganize primary key elements
+        anonymization_dataframe[f"{primary_key}"] = save_primary_key_elements
+
+        # Get anonymized data to update
+        dictionary_anonymized_data = anonymization_dataframe.to_dict(orient='records')
+        print(dictionary_anonymized_data)
+
+        # Update data
+        for row_anonymized in dictionary_anonymized_data:
+            session_client_db.query(table_client_db).\
+            filter(table_client_db.c[0] == row_anonymized[f'{primary_key}']).\
+            update(row_anonymized)
+
+        # Commit changes
+        session_client_db.commit()
+
+        # Getting rows of Client Database
+        results_query_client_database = proxy_client_database.fetchmany(query_size)
+
+        # Get primary key of Client Database in columns_to_anonymization only query
+        columns_to_anonymization.insert(0, primary_key)
+    
+    session_client_db.close()'''
