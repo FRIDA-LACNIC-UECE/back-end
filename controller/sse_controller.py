@@ -5,8 +5,9 @@ from config import (
     HOST, PORT
 )
 
-from model.database_model import Database, database_share_schema
 from model.valid_database_model import ValidDatabase
+from model.database_model import Database, database_share_schema
+from model.database_key_model import DatabaseKey, database_key_share_schema
 
 from controller import app, db
 
@@ -177,37 +178,80 @@ def deleteHashRows(current_user):
     return jsonify({'message': 'delete_rows_hash_deleted'}), 200
 
 
-@ app.route('/row_by_hash', methods=['GET'])
-def line_by_hash():
+@ app.route('/rowById', methods=['GET'])
+@jwt_required
+def rowById(current_user):
     try:
-        src_db_cloud = request.json.get('src_db_cloud')
-        src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
-                                                src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
+        # Get id of database to encrypt
+        id_db = request.json.get('id_db')
+
+        # Get database information by id
+        database = Database.query.filter_by(id=id_db).first()
+        result_database = database_share_schema.dump(database)
+
+        # Return error: database not found (404)
+        if not database:
+            return jsonify({'message': 'database_not_found'}), 404
+
+        # Return error: database does not belong to the user (401)
+        if database.id_user != current_user.id:
+            return jsonify({'message': 'user_unauthorized'}), 401
+
+        src_cloud_db_path = "{}://{}:{}@{}:{}/{}".format(
+            TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+            HOST, PORT, f"{result_database['name']}_cloud"
+        )
         
-        table_name = src_db_cloud["table"]
+        table_name = request.json.get('table_name')
 
-        hash = request.json.get('line_hash')
+        row_id = request.json.get('row_id')
 
-        row_found = sse_service.line_by_hash(src_db_cloud_path, table_name, hash)
+        row_found = sse_service.row_by_id(src_cloud_db_path, table_name, row_id)
     except:
         return jsonify({'message': 'row_invalid_data'}), 400
 
     return jsonify({'row_found': row_found}), 200
 
 
-@ app.route('/row_by_id', methods=['GET'])
-def line_by_id():
-    try:
-        src_db_cloud = request.json.get('src_db_cloud')
-        src_db_cloud_path = "{}://{}:{}@{}:{}/{}".format(src_db_cloud['type'], src_db_cloud['user'],
-                                                src_db_cloud['password'], src_db_cloud['ip'], src_db_cloud['port'], src_db_cloud['name'])
-        
-        table_name = src_db_cloud["table"]
+@ app.route('/rowByHash', methods=['GET'])
+@jwt_required
+def line_by_hash(current_user):
+  
+    #Get name current user
+    name_current = current_user.name
 
-        id = request.json.get('id')
+    # Get id of database to encrypt
+    id_db = request.json.get('id_db')
 
-        row_found = sse_service.line_by_id(src_db_cloud_path, table_name, id)
-    except:
-        return jsonify({'message': 'row_invalid_data'}), 400
+    # Get database information by id
+    database = Database.query.filter_by(id=id_db).first()
+    result_database = database_share_schema.dump(database)
+
+    # Return error: database not found (404)
+    if not database:
+        return jsonify({'message': 'database_not_found'}), 404
+
+    # Return error: database does not belong to the user (401)
+    if database.id_user != current_user.id:
+        return jsonify({'message': 'user_unauthorized'}), 401
+
+    src_cloud_db_path = "{}://{}:{}@{}:{}/{}".format(
+        TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+        HOST, PORT, f"{result_database['name']}_cloud"
+    )
+    
+    # Get public and private keys of database
+    result_keys = database_key_share_schema.dump(
+        DatabaseKey.query.filter_by(id_db=id_db).first()
+    )
+    
+    table_name = request.json.get('table_name')
+
+    row_hash = request.json.get('row_hash')
+
+    row_found = sse_service.row_by_hash(
+        src_cloud_db_path, table_name, row_hash, 
+        result_keys['public_key'], result_keys['private_key']
+    )
 
     return jsonify({'row_found': row_found}), 200

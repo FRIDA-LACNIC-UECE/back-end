@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import MetaData, Table, create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database_service import get_primary_key, create_table_session
+from service.database_service import get_primary_key, create_table_session
 
 
 def anonymization_database_rows(src_client_db_path, table_name, columns_to_anonymization, rows_to_anonymization):
@@ -72,7 +72,7 @@ def anonymization_database_rows(src_client_db_path, table_name, columns_to_anony
     session_client_db.close()
 
 
-def anonymization_database(src_db_client_path, src_table, columns_to_anonymization):
+def anonymization_database(src_client_db_path, table_name, columns_to_anonymization):
 
     # Get primary key of Client Database
     primary_key = get_primary_key(src_client_db_path, table_name)
@@ -93,8 +93,7 @@ def anonymization_database(src_db_client_path, src_table, columns_to_anonymizati
     
     # Transform rows database to dataframe
     dataframe_to_anonymization = pd.DataFrame(
-        data=from_dataframe,
-        columns=columns_to_anonymization
+        data=from_dataframe
     )
     dataframe_to_anonymization = dataframe_to_anonymization[columns_to_anonymization]
 
@@ -107,6 +106,8 @@ def anonymization_database(src_db_client_path, src_table, columns_to_anonymizati
     # Convert columns_to_anonymization to category
     for column in columns_to_anonymization:
         dataframe_to_anonymization[column] = dataframe_to_anonymization[column].astype("category")
+    
+    print(dataframe_to_anonymization.iloc[0].to_dict())
 
     # Run anonymization
     anonymization_dataframe = pd.DataFrame()
@@ -114,9 +115,6 @@ def anonymization_database(src_db_client_path, src_table, columns_to_anonymizati
     for column in columns_to_anonymization:
 
         from_anonymization_dataframe = []
-
-        #eatures_names = columns_to_anonymization.copy()
-        #features_names.remove(str(column))
 
         p = anonypy.Preserver(dataframe_to_anonymization, [str(column)], str(column))
         rows = p.anonymize_t_closeness(k=3, p=0.2)
@@ -145,7 +143,7 @@ def anonymization_database(src_db_client_path, src_table, columns_to_anonymizati
     
     
 if __name__ == "__main__":
-    src_client_db_path = "mysql://root:Dd16012018@localhost:3306/fake_db"
+    src_client_db_path = "mysql://root:Dd16012018@localhost:3306/test_db"
     table_name = 'nivel1'
     columns_to_anonymization = ["nome", "profissao"]
 
@@ -153,7 +151,7 @@ if __name__ == "__main__":
     primary_key = get_primary_key(src_client_db_path, table_name)
 
     # Get primary key of Client Database in columns_to_anonymization only query
-    columns_to_anonymization.insert(0, primary_key)
+    #columns_to_anonymization.insert(0, primary_key)
 
     # Create table object of Client Database and 
     # session of Client Database to run sql operations
@@ -164,9 +162,8 @@ if __name__ == "__main__":
     # Get data in database
     rows_to_anonymization = session_client_db.query(table_client_db).all()
 
-    anonymization_database_rows(
+    anonymization_database(
         src_client_db_path,
         table_name,
-        columns_to_anonymization,
-        rows_to_anonymization
+        columns_to_anonymization
     )

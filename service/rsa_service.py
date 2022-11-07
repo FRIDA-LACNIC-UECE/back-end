@@ -66,7 +66,7 @@ def encrypt_list(data_list, key):
     return encrypted_list
 
 
-def dencrypt_list(data_list, key):
+def decrypt_list(data_list, key):
 
     decrypted_list = []
 

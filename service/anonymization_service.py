@@ -56,7 +56,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
         if anonymization_type_name == "ppcbtf":
             ppcbtf_anonymization_service.anonymization_database(
                 src_client_db_path, 
-                src_table=anonymization['table'],
+                table_name=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
             print("\n\nppcbtf anonimizando\n\n")
@@ -64,7 +64,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
         elif anonymization_type_name == "ppcbti":
             ppcbti_anonymization_service.anonymization_database(
                 src_client_db_path, 
-                src_table=anonymization['table'],
+                table_name=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
             print("\n\nppcbti anonimizando\n\n")
@@ -72,7 +72,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
         elif anonymization_type_name == "anonypy":
             anonypy_anonymization_service.anonymization_database(
                 src_client_db_path, 
-                src_table=anonymization['table'],
+                table_name=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
             print("\n\anonypy anonimizando\n\n")

@@ -4,7 +4,7 @@ import scipy.linalg as la
 from sqlalchemy import MetaData, Table, create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-from database_service import get_primary_key, create_table_session
+from service.database_service import get_primary_key, create_table_session
 
 
 def anonymization_database_rows(src_client_db_path, table_name, columns_to_anonymization, rows_to_anonymization):

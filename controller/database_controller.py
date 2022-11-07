@@ -294,7 +294,6 @@ def getPrimaryKey(current_user):
         # Get table name
         table_name = request.json.get('table')
 
-
         return jsonify({"primary_key": get_primary_key(src_db_path, table_name)}), 200
     except:
         return jsonify({'message': 'database_invalid_data'}), 400
