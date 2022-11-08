@@ -4,6 +4,17 @@ from sqlalchemy import (MetaData, Table, create_engine, inspect)
 from sqlalchemy.orm import sessionmaker, Session
 
 
+def get_index_column_table_object(table_object, column_name):
+    index = 0
+
+    for column in table_object.c:
+        if column.name == column_name:
+            return index
+        index += 1
+
+    return None
+
+
 def get_columns_database(engine_db, table_name):
     columns_list = []
     insp = inspect(engine_db)

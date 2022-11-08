@@ -4,8 +4,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker, Session
 
-from service.rsa_service import decrypt_dict, loadKeys
-from service.database_service import get_columns_database, create_table_session, get_primary_key
+from service.rsa_service import loadKeys
+from service.database_service import (
+    get_columns_database, create_table_session, 
+    get_primary_key, get_index_column_table_object
+)
 
 
 def include_hash_rows(src_db_cloud_path, src_table, hash_rows):
@@ -200,36 +203,9 @@ def delete_hash_rows(src_cloud_db_path, src_table, primary_key_list):
 
     return 200
     
-
-def row_by_id(src_db_cloud_path, table_name, row_id):
-
-    # Creating connection with client database
-    srcEngineCloud = create_engine(src_db_cloud_path)
-    connectionCloud= srcEngineCloud.connect()
-
-    # Getting columns names of client database
-    result = connectionCloud.execute(f"SELECT * FROM {table_name}")
-    columns_list = list(result.keys())
-    print(columns_list)
-
-    # create engine, reflect existing columns, and create table object for oldTable
-    # change this for your source database
-    SourceSessionCloud = sessionmaker(srcEngineCloud)
-    srcEngineCloud._metadata = MetaData(bind=srcEngineCloud)
-    srcEngineCloud._metadata.reflect(srcEngineCloud)  # get columns from existing table
-    srcEngineCloud._metadata.tables[table_name].columns = [
-        i for i in srcEngineCloud._metadata.tables[f"{table_name}"].columns if (i.name in columns_list)]
-    srcTableCloud= Table(table_name, srcEngineCloud._metadata)
-    sourceSessionCloud = SourceSessionCloud()
-
-    statement = sourceSessionCloud.query(srcTableCloud).filter(srcTableCloud.c[0] == row_id)
-
-    result = sourceSessionCloud.execute(statement)
-
-    return list(map(list, result))[0]
-
-
-def row_by_hash(src_cloud_db_path, table_name, row_hash, public_key_str, private_key_str):
+    
+def row_search(src_client_db_path, src_cloud_db_path, table_name, 
+    search_type, search_value, public_key_str, private_key_str):
 
     # Creating connection with client database
     engine_cloud_db = create_engine(src_cloud_db_path)
@@ -241,27 +217,49 @@ def row_by_hash(src_cloud_db_path, table_name, row_hash, public_key_str, private
         table_name=table_name
     )
 
-    # Get data by row_hash
-    result_query = session_cloud_db.query(table_cloud_db).filter(table_cloud_db.c[-1]==row_hash)
-    dict_query_data = [row._asdict() for row in result_query][0]
-    print(dict_query_data)
+    # Get primary key name of Client Database
+    primary_key_name = get_primary_key(src_client_db_path, table_name)
+
+    # Searching to row
+    if search_type == "primary_key":
+        index_column_to_search = get_index_column_table_object(
+            table_cloud_db, primary_key_name
+        )
+        query_result = session_cloud_db.query(table_cloud_db).filter(
+            table_cloud_db.c[index_column_to_search] == search_value
+        ).all()
+    else:
+        index_column_to_search = get_index_column_table_object(
+            table_cloud_db, 'line_hash'
+        )
+        print(index_column_to_search)
+        query_result = session_cloud_db.query(table_cloud_db).filter(
+            table_cloud_db.c[index_column_to_search] == search_value
+        ).all()
+
+    print(query_result)
 
     # Load rsa keys
     public_key, private_key = loadKeys(public_key_str, private_key_str)
-    print(private_key)
-    
-    # Get name primary key
-    #primary_key_name = get_primary_key(src_cloud_db_path, table_name)
-    primary_key_name = "id"
 
-    # Remove primary key
+    dict_query_data = [row._asdict() for row in query_result][0]
+    print(dict_query_data)
+
+    # Remove primary key and hash value
     primary_key_value = dict_query_data[f"{primary_key_name}"]
+    hash_value = dict_query_data["line_hash"]
     remove_primary_key_response = dict_query_data.pop(primary_key_name, None)
+    remove_line_hash_response = dict_query_data.pop("line_hash", None)
 
-    if not remove_primary_key_response:
-        return 400
+    if remove_primary_key_response == None or remove_line_hash_response == None:
+        return None
     
     # Decrypted dict_query_data
-    dict_decrypted = decrypt_dict(dict_query_data, private_key)
+    #dict_decrypted = decrypt_dict(dict_query_data, private_key)
+    dict_decrypted = dict_query_data
+
+    # Insert primary key value and line hash value
+    dict_query_data[f"{primary_key_name}"] = primary_key_value
+    dict_query_data["line_hash"] = hash_value
 
     return dict_decrypted

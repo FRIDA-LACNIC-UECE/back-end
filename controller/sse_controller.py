@@ -14,9 +14,9 @@ from controller import app, db
 from service.authenticate import jwt_required
 from service.sse_service import (
     include_column_hash, show_hash_rows, 
-    include_hash_rows, delete_hash_rows
+    include_hash_rows, delete_hash_rows,
+    row_search
 )
-from service import sse_service
 
 
 @ app.route('/includeHashRows', methods=['POST'])
@@ -178,44 +178,9 @@ def deleteHashRows(current_user):
     return jsonify({'message': 'delete_rows_hash_deleted'}), 200
 
 
-@ app.route('/rowById', methods=['GET'])
+@ app.route('/rowSearch', methods=['POST'])
 @jwt_required
-def rowById(current_user):
-    try:
-        # Get id of database to encrypt
-        id_db = request.json.get('id_db')
-
-        # Get database information by id
-        database = Database.query.filter_by(id=id_db).first()
-        result_database = database_share_schema.dump(database)
-
-        # Return error: database not found (404)
-        if not database:
-            return jsonify({'message': 'database_not_found'}), 404
-
-        # Return error: database does not belong to the user (401)
-        if database.id_user != current_user.id:
-            return jsonify({'message': 'user_unauthorized'}), 401
-
-        src_cloud_db_path = "{}://{}:{}@{}:{}/{}".format(
-            TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
-            HOST, PORT, f"{result_database['name']}_cloud"
-        )
-        
-        table_name = request.json.get('table_name')
-
-        row_id = request.json.get('row_id')
-
-        row_found = sse_service.row_by_id(src_cloud_db_path, table_name, row_id)
-    except:
-        return jsonify({'message': 'row_invalid_data'}), 400
-
-    return jsonify({'row_found': row_found}), 200
-
-
-@ app.route('/rowByHash', methods=['GET'])
-@jwt_required
-def line_by_hash(current_user):
+def rowSearch(current_user):
   
     #Get name current user
     name_current = current_user.name
@@ -235,6 +200,18 @@ def line_by_hash(current_user):
     if database.id_user != current_user.id:
         return jsonify({'message': 'user_unauthorized'}), 401
 
+    # Get valid database type of Client Database
+    db_type_name = ValidDatabase.query.filter_by(
+            id=result_database['id_db_type']
+        ).first().name
+
+    # Get path of Client Database
+    src_client_db_path = "{}://{}:{}@{}:{}/{}".format(
+        db_type_name, result_database['user'], result_database['password'],
+        result_database['host'], result_database['port'], result_database['name']
+    )
+        
+    # Get path of Cloud Database
     src_cloud_db_path = "{}://{}:{}@{}:{}/{}".format(
         TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
         HOST, PORT, f"{result_database['name']}_cloud"
@@ -245,13 +222,28 @@ def line_by_hash(current_user):
         DatabaseKey.query.filter_by(id_db=id_db).first()
     )
     
+    # Get table name to search
     table_name = request.json.get('table_name')
 
-    row_hash = request.json.get('row_hash')
+    # Get search type
+    search_type = request.json.get('search_type')
 
-    row_found = sse_service.row_by_hash(
-        src_cloud_db_path, table_name, row_hash, 
-        result_keys['public_key'], result_keys['private_key']
+    if search_type == "primary_key":
+        search_value = request.json.get('search_value')
+    elif search_type == "hash":
+        search_value = request.json.get('search_value')
+    else:
+        return jsonify({'message': 'invalid_search_data'}), 400
+
+    found_row = row_search(
+        src_client_db_path, src_cloud_db_path, table_name, 
+        search_type, search_value, result_keys['public_key'], 
+        result_keys['private_key']
     )
 
-    return jsonify({'row_found': row_found}), 200
+    if not found_row:
+        return jsonify({'message': 'row_not_found'}), 200
+    
+    print(found_row)
+
+    return jsonify({'found_row': found_row}), 200
