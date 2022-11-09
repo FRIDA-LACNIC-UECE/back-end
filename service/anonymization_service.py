@@ -2,8 +2,10 @@ from model.anonymization_type_model import AnonymizationType
 from service import (
     ppcbtf_anonymization_service, ppcbti_anonymization_service, 
     anonypy_anonymization_service, ip_anonymization_service,
-    date_anonymization_service 
+    date_anonymization_service
 )
+
+from service import date_anonymization_service 
 
 
 def anonymization_database_rows(src_client_db_path, lists_columns_anonymizations, rows_to_anonymization):
@@ -51,6 +53,15 @@ def anonymization_database_rows(src_client_db_path, lists_columns_anonymizations
             )
             print("\n\n ip_anonymizer anonimizando\n\n")
         
+        elif anonymization_type_name == "date_anonymizer":
+            date_anonymization_service.anonymization_database_rows(
+                src_client_db_path, 
+                table_name=anonymization['table'],
+                columns_to_anonymization=anonymization['columns'],
+                rows_to_anonymization=rows_to_anonymization
+            )
+            print("\n\n date_anonymizer anonimizando\n\n")
+        
         else:
             return 406 #Not Acceptable
 
@@ -72,7 +83,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
                 table_name=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
-            print("\n\nppcbtf anonimizando\n\n")
+            print("\n\n ppcbtf anonimizando\n\n")
 
         elif anonymization_type_name == "ppcbti":
             ppcbti_anonymization_service.anonymization_database(
@@ -80,7 +91,7 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
                 table_name=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
-            print("\n\nppcbti anonimizando\n\n")
+            print("\n\n ppcbti anonimizando\n\n")
 
         elif anonymization_type_name == "anonypy":
             anonypy_anonymization_service.anonymization_database(
@@ -88,15 +99,23 @@ def anonimization_database(src_client_db_path, lists_columns_anonymizations):
                 table_name=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
-            print("\n\anonypy anonimizando\n\n")
-
+            print("\n\n anonypy anonimizando\n\n")
+        
         elif anonymization_type_name == "ip_anonymizer":
             ip_anonymization_service.anonymization_database(
                 src_client_db_path, 
                 table_name=anonymization['table'],
                 columns_to_anonymization=anonymization['columns']
             )
-            print("\n\ip_anonymizer anonimizando\n\n")
+            print("\n\n ip_anonymizer anonimizando\n\n")
+
+        elif anonymization_type_name == "date_anonymizer":
+            date_anonymization_service.anonymization_database(
+                src_client_db_path, 
+                table_name=anonymization['table'],
+                columns_to_anonymization=anonymization['columns']
+            )
+            print("\n\n date_anonymizer anonimizando\n\n")
         
         else:
             return 406 #Not Acceptable

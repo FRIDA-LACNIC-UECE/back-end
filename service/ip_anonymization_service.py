@@ -152,7 +152,7 @@ def anonymize_ip(ip):
 
 def anonymization_data(dataframe):
     # Anonymize dataframe
-    dataframe.applymap(anonymize_ip)
+    dataframe = dataframe.applymap(anonymize_ip)
     
     return dataframe
 
@@ -247,7 +247,6 @@ def anonymization_database(src_client_db_path, table_name, columns_to_anonymizat
     # Run anonymization
     anonymization_dataframe = dataframe_to_anonymization[columns_to_anonymization]
     anonymization_dataframe = anonymization_data(anonymization_dataframe)
-    anonymization_dataframe = pd.DataFrame(data=anonymization_dataframe, columns=columns_to_anonymization)
     
     # Reorganize primary key elements
     anonymization_dataframe[f"{primary_key}"] = save_primary_key_elements

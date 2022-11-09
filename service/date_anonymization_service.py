@@ -1,5 +1,6 @@
 import logging
 import sys
+import time
 from array import array
 from functools import reduce
 from datetime import datetime
@@ -11,7 +12,7 @@ from Crypto.Cipher import AES
 from sqlalchemy import MetaData, Table, create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-from database_service import get_primary_key, create_table_session
+from service.database_service import get_primary_key, create_table_session
 
 
 if sys.version_info < (3, 3):
@@ -186,7 +187,7 @@ def anonymize_date(date):
 
     # Get day
     day = split_ip[0]
-    day = str(int(day) % 30)
+    day = str((int(day) % 30) + 1)
 
     if len(day) == 1:
         day = '0' + day
@@ -195,7 +196,7 @@ def anonymize_date(date):
 
     # Get month
     month = split_ip[1]
-    month = str(int(month) % 12)
+    month = str((int(month) % 12) + 1)
 
     if len(month) == 1:
         month = '0' + month
@@ -206,8 +207,8 @@ def anonymize_date(date):
     year_part1 = split_ip[2]
     year_part2 = split_ip[3]
 
-    year_part1 = str(int(year_part1) % 99)
-    year_part2 = str(int(year_part2) % 99)
+    year_part1 = str((int(year_part1) % 99) + 1)
+    year_part2 = str((int(year_part2) % 99) + 1)
 
     if len(year_part1) == 1:
         year_part1 = year_part1 + '0'
@@ -218,14 +219,20 @@ def anonymize_date(date):
     year = year_part1 + year_part2
     year = int(year)
 
-    print(f"{year}-{month}-{day}")
-    
-    return datetime(year, month, day)
+    # Error with 30 and 29 on February
+    if month == 2 and day >= 29:
+        day = 28
+
+    # Convert from string to datetime
+    datetime_str = f"{month}-{day}-{year}"
+    datetime_object = datetime.strptime(datetime_str, '%m-%d-%Y')
+
+    return datetime_object
 
 
 def anonymization_data(dataframe):
     # Anonymize dataframe
-    dataframe.applymap(anonymize_date)
+    dataframe = dataframe.applymap(anonymize_date)
     
     return dataframe
 

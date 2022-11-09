@@ -51,7 +51,6 @@ def anonymization_database_rows(src_client_db_path, table_name, columns_to_anony
 
     # Get anonymized data to update
     dictionary_anonymized_data = anonymization_dataframe.to_dict(orient='records')
-    print(dictionary_anonymized_data)
 
     # Update data
     for row_anonymized in dictionary_anonymized_data:
@@ -89,8 +88,6 @@ def anonymization_database(src_client_db_path, table_name, columns_to_anonymizat
     )
     dataframe_to_anonymization = dataframe_to_anonymization[columns_to_anonymization]
 
-    print(dataframe_to_anonymization)
-
     # Remove primary key of columns_to_anonymization list
     # but save elements in save_primary_key_elements
     save_primary_key_elements = dataframe_to_anonymization[primary_key]
@@ -108,7 +105,6 @@ def anonymization_database(src_client_db_path, table_name, columns_to_anonymizat
 
     # Get anonymized data to update
     dictionary_anonymized_data = anonymization_dataframe.to_dict(orient='records')
-    print(dictionary_anonymized_data)
 
     # Update data
     for row_anonymized in dictionary_anonymized_data:
