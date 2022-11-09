@@ -13,9 +13,9 @@ from controller import app, db
 
 from service.authenticate import jwt_required
 from service.sse_service import (
-    include_column_hash, show_hash_rows, 
-    include_hash_rows, delete_hash_rows,
-    row_search
+    show_hash_rows, row_search,
+    include_column_hash, include_hash_rows, 
+    delete_hash_rows
 )
 
 
@@ -54,7 +54,7 @@ def includeHashRows(current_user):
         return jsonify({'message': 'hash_not_included'}), 400
 
 
-@ app.route('/includeColumnHash', methods=['POST'])
+@ app.route('/includeHashColumn', methods=['POST'])
 @ jwt_required
 def includeColumnHash(current_user):
     try:

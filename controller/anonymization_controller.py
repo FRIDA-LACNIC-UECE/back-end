@@ -1,11 +1,23 @@
 from flask import jsonify, request
+from sqlalchemy import create_engine
+
+from config import (
+    TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, 
+    HOST, PORT
+)
 
 from controller import app, db
+
 from model.database_model import Database, database_share_schema
 from model.valid_database_model import ValidDatabase
 from model.anonymization_model import Anonymization, anonymizations_share_schema
-from service import anonymization_service
+
 from service.authenticate import jwt_required
+from service.anonymization_service import (
+    anonimization_database,
+    anonymization_database_rows
+)
+from service.sse_service import generate_hash_column
 
 
 @ app.route('/getAnonymization', methods=['GET'])
@@ -22,6 +34,7 @@ def getAnonymization(current_user):
         }), 404
 
     return jsonify(result)
+
 
 @ app.route('/addAnonymization', methods=['POST'])
 @jwt_required
@@ -116,13 +129,13 @@ def anonymizationDatabaseRows(current_user):
             return jsonify({'message': 'anonymization_invalid_data'}), 400
 
         # Run anonymization
-        anonymization_service.anonymization_database_rows(
+        anonymization_database_rows(
             src_client_db_path, lists_columns_anonymizations,
             rows_to_anonymization
         )
 
         return jsonify({'message': 'anonymization_done'}), 200
-    except:
+    except Exception as error:   
         return jsonify({'message': 'anonymization_invalid_data'}), 400
 
 
@@ -143,7 +156,15 @@ def anonymizationDatabase(current_user):
 
     db_type_name = ValidDatabase.query.filter_by(id=result_database['id_db_type']).first().name
 
-    src_client_db_path = f"{db_type_name}://{result_database['user']}:{result_database['password']}@{result_database['host']}:{result_database['port']}/{result_database['name']}"
+    src_client_db_path = "{}://{}:{}@{}:{}/{}".format(
+            db_type_name, result_database['user'], result_database['password'],
+            result_database['host'], result_database['port'], result_database['name']
+        )
+
+    src_dest_db_path = "{}://{}:{}@{}:{}/{}".format(
+        TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE,
+        HOST, PORT, f"{result_database['name']}_cloud"
+    )
 
     # Get chosen columns
     lists_columns_anonymizations = anonymizations_share_schema.dump(
@@ -151,9 +172,20 @@ def anonymizationDatabase(current_user):
     )
 
     # Run anonymization
-    anonymization_service.anonimization_database(
-        src_client_db_path, lists_columns_anonymizations
+    anonimization_database(
+        src_client_db_path, 
+        lists_columns_anonymizations
     )
+    
+    # Generate and insert hash on Cloud Database
+    engine_cloud_db = create_engine(src_dest_db_path)
+
+    for table_name in list(engine_cloud_db.table_names()):
+        generate_hash_column(
+            src_client_db_path=src_client_db_path,
+            src_cloud_db_path=src_dest_db_path,
+            src_table=table_name
+        )
 
     return jsonify({'message': 'anonymization_done'}), 200
 
@@ -185,6 +217,7 @@ def getColumnsToAnonymize(current_user):
 
         sensitive_columns = []
         ids_type_anonymization = []
+
         # Get sensitive_columns
         for sensitive_column in lists_columns_anonymizations:
             sensitive_columns += sensitive_column['columns']

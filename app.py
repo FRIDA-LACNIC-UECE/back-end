@@ -9,9 +9,8 @@ from model import (
 )
 
 from controller import (
-    app, db, database_controller, user_controller, 
-    valid_database_controller, rsa_controller, sse_controller,
-    anonymization_controller, anonymization_type_controller
+    app, sse_controller, db, database_controller, user_controller, 
+    valid_database_controller, rsa_controller, anonymization_controller, anonymization_type_controller
 )
 
 
