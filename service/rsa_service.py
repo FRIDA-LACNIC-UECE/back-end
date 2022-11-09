@@ -77,6 +77,14 @@ def decrypt_list(data_list, key):
     return decrypted_list
 
 
+def decrypt_dict(data_dict, key):
+
+    for keys in data_dict.keys():
+        data_dict[keys] = decrypt(data_dict[keys], key)
+
+    return data_dict
+
+
 def encrypt_database_rows(rows_to_encrypt, src_dest_db_path, src_table, publicKeyStr, privateKeyStr):
 
     # Load rsa keys

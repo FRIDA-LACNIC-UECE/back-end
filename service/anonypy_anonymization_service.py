@@ -12,7 +12,7 @@ def anonymization_database_rows(src_client_db_path, table_name, columns_to_anony
     primary_key = get_primary_key(src_client_db_path, table_name)
 
     # Get primary key of Client Database in columns_to_anonymization only query
-    #columns_to_anonymization.insert(0, primary_key)
+    columns_to_anonymization.insert(0, primary_key)
 
     # Create table object of Client Database and 
     # session of Client Database to run sql operations
@@ -140,30 +140,3 @@ def anonymization_database(src_client_db_path, table_name, columns_to_anonymizat
 
     session_client_db.commit()
     session_client_db.close()
-    
-    
-if __name__ == "__main__":
-    src_client_db_path = "mysql://root:Dd16012018@localhost:3306/test_db"
-    table_name = 'nivel1'
-    columns_to_anonymization = ["nome", "profissao"]
-
-    # Get primary key of Client Database
-    primary_key = get_primary_key(src_client_db_path, table_name)
-
-    # Get primary key of Client Database in columns_to_anonymization only query
-    #columns_to_anonymization.insert(0, primary_key)
-
-    # Create table object of Client Database and 
-    # session of Client Database to run sql operations
-    table_client_db, session_client_db = create_table_session(
-        src_client_db_path, table_name
-    )
-
-    # Get data in database
-    rows_to_anonymization = session_client_db.query(table_client_db).all()
-
-    anonymization_database(
-        src_client_db_path,
-        table_name,
-        columns_to_anonymization
-    )
