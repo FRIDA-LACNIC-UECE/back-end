@@ -19,7 +19,7 @@ def register():
         user = User.query.filter_by(email=email).first()
 
         if user:
-            return jsonify({'error': 'user_already_registered'}), 409
+            return jsonify({'message': 'user_already_registered'}), 409
 
         user = User(name, email, pwd, is_admin)
         db.session.add(user)
@@ -102,7 +102,7 @@ def deleteUser(current_user):
 
         if not user:
             return jsonify({
-                'error': 'user_not_found'
+                'message': 'user_not_found'
             }), 404
 
         db.session.delete(user)

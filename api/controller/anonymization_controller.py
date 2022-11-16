@@ -135,7 +135,7 @@ def anonymizationDatabaseRows(current_user):
         )
 
         return jsonify({'message': 'anonymization_done'}), 200
-    except Exception as error:   
+    except:
         return jsonify({'message': 'anonymization_invalid_data'}), 400
 
 

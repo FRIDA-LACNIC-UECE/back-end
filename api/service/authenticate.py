@@ -17,13 +17,13 @@ def jwt_required(f):
 
         if not token:
             return jsonify({
-                "error": "Você não tem permissão para acessar essa rota!"
-            }), 403
+                "message": "token_not_found"
+            }), 404
 
         if not "Bearer" in token:
             return jsonify({
-                "error": "Token inválido!"
-            }), 401
+                "message": "token_invalid"
+            }), 400
 
         try:
             token_pure = token.replace("Bearer ", "")
@@ -32,7 +32,7 @@ def jwt_required(f):
             current_user = User.query.get(decoded['id'])
         except:
             return jsonify({
-                "error": "Token expirado!"
+                "message": "token_expired"
             }), 403
         return f(current_user=current_user, *args, **kwargs)
     return wrapper
