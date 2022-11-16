@@ -18,7 +18,7 @@ services:
       - ./db/entrypoint:/docker-entrypoint-initdb.d
 
   api:
-    build: ""
+    build: "./api"
     image: backend-api
     container_name: api-container
     ports:
