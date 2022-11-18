@@ -1,11 +1,10 @@
 from model.anonymization_type_model import AnonymizationType
-from service import (
-    ppcbtf_anonymization_service, ppcbti_anonymization_service, 
-    anonypy_anonymization_service, ip_anonymization_service,
-    date_anonymization_service
-)
 
-from service import date_anonymization_service 
+from service.anonymization_types import (
+    anonypy_anonymization_service, date_anonymization_service, 
+    ip_anonymization_service, ppcbtf_anonymization_service,
+    ppcbti_anonymization_service
+)
 
 
 def anonymization_database_rows(src_client_db_path, lists_columns_anonymizations, rows_to_anonymization):

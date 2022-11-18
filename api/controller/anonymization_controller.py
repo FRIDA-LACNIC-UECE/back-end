@@ -10,72 +10,66 @@ from controller import app, db
 
 from model.database_model import Database, database_share_schema
 from model.valid_database_model import ValidDatabase
-from model.anonymization_model import Anonymization, anonymizations_share_schema
-
-from service.authenticate import jwt_required
-from service.anonymization_service import (
-    anonimization_database,
-    anonymization_database_rows
+from model.anonymization_model import (
+    Anonymization, anonymizations_share_schema
 )
+
+from service.anonymization_service import (
+    anonimization_database, anonymization_database_rows,
+    get_anonymizations, add_anonymization
+)
+from service.authenticate import jwt_required
 from service.sse_service import generate_hash_column
 
 
-@ app.route('/getAnonymization', methods=['GET'])
-@ jwt_required
+@app.route('/getAnonymization', methods=['GET'])
+@jwt_required
 def getAnonymization(current_user):
-
     try:
-        result = anonymizations_share_schema.dump(
-            Anonymization.query.all()
-        )
+        return jsonify(get_anonymizations())
     except:
         return jsonify({
             'message': 'anonymizations_not_found'
         }), 404
 
-    return jsonify(result)
 
-
-@ app.route('/addAnonymization', methods=['POST'])
+@app.route('/addAnonymization', methods=['POST'])
 @jwt_required
 def addAnonymization(current_user):
-
     try:
-        # Get id of database to encrypt
+        # Get database id to anonymize
         id_db = request.json.get('id_db')
 
         # Get anonymization type
         id_anonymization_type = request.json.get('id_anonymization_type')
 
-        # Get chosen table
+        # Get name table to anonymize
         table_name = request.json.get('table')
 
-        # Get chosen columns
+        # Get chosen columns to anonymize
         columns_to_anonimization = request.json.get('columns')
- 
-        anonymization = Anonymization(
-            id_database=id_db, id_anonymization_type=id_anonymization_type, 
-            table=table_name, columns=columns_to_anonimization
-        )
 
-        db.session.add(anonymization)
-        db.session.commit()
+        # Add anonymization
+        add_anonymization(
+            id_db=id_db, id_anonymization_type=id_anonymization_type,
+            table_name=table_name, columns_to_anonimization=columns_to_anonimization
+        )
+ 
+        return jsonify({
+            'message': 'anonymization_created'
+        }), 201
+
     except:
         return jsonify({
             'message': 'anonymization_invalid_data'
         }), 400
 
-    return jsonify({
-        'message': 'anonymization_created'
-    }), 201
 
-
-@ app.route('/deleteAnonymization', methods=['DELETE'])
+@app.route('/deleteAnonymization', methods=['DELETE'])
 @jwt_required
 def deleteAnonymization(current_user):
-    
     try:
-        # Get anonymization data
+        # Get anonymization id
         id_anonymization = request.json.get('id_anonymization')
         anonymization = Anonymization.query.filter_by(id=id_anonymization).first()
 
@@ -86,13 +80,16 @@ def deleteAnonymization(current_user):
         
         db.session.delete(anonymization)
         db.session.commit()
+
+        return jsonify({
+            'message': 'anonymization_deleted'
+        }), 200
+
     except:
         return jsonify({
             'message': 'anonymization_not_deleted'
         }), 400
 
-    return jsonify({'message': 'anonymization_deleted'})
-    
 
 @ app.route('/anonymizationDatabaseRows', methods=['POST'])
 @jwt_required
