@@ -3,16 +3,31 @@ import pandas as pd
 from sqlalchemy import (MetaData, Table, create_engine, inspect)
 from sqlalchemy.orm import sessionmaker, Session
 
+from model.valid_database_model import ValidDatabase
+from model.database_model import Database, database_share_schema
 
-def get_index_column_table_object(table_object, column_name):
-    index = 0
 
-    for column in table_object.c:
-        if column.name == column_name:
-            return index
-        index += 1
+def get_path_database(id_db):
+    # Get database path by id and check if database found exist
+    result_database = database_share_schema.dump(
+        Database.query.filter_by(id=id_db).first()
+    )
 
-    return None
+    if not result_database:
+        return None
+    
+    db_type_name = ValidDatabase.query.filter_by(
+        id=result_database['id_db_type']
+    ).first().name
+    
+    # Define Client Database Path
+    src_client_db_path = "{}://{}:{}@{}:{}/{}".format(
+        db_type_name, result_database['user'], result_database['password'],
+        result_database['host'], result_database['port'],
+        result_database['name']
+    )
+
+    return src_client_db_path
 
 
 def get_columns_database(engine_db, table_name):
@@ -24,13 +39,6 @@ def get_columns_database(engine_db, table_name):
         columns_list.append(str(c['name']))
 
     return columns_list
-
-
-def get_primary_key(src_db_path, table_name):
-
-    table_object_db, _ = create_table_session(src_db_path, table_name)
-    
-    return [key.name for key in inspect(table_object_db).primary_key][0]
 
 
 def create_table_session(src_db_path, table_name, columns_list=None):
@@ -55,6 +63,29 @@ def create_table_session(src_db_path, table_name, columns_list=None):
     session_db = Session(engine_db)
 
     return table_object_db, session_db
+
+
+def get_primary_key(src_db_path, table_name):
+
+    # Create table object of database
+    table_object_db, _ = create_table_session(src_db_path, table_name)
+    
+    return [key.name for key in inspect(table_object_db).primary_key][0]
+
+
+def get_index_column_table_object(src_db_path, table_name, column_name):
+    
+    # Create table object of database
+    table_object_db, _ = create_table_session(src_db_path, table_name)
+
+    # Search index of column
+    index = 0
+    for column in table_object_db.c:
+        if column.name == column_name:
+            return index
+        index += 1
+
+    return None
 
 
 def show_database(src_db_path, table_name, page=0, per_page=100):
