@@ -1,16 +1,15 @@
 from flask import jsonify, request
+from sqlalchemy import create_engine
+
+from controller import app, db
 from model.anonymization_model import Anonymization, anonymizations_share_schema
 from model.database_model import Database, database_share_schema
 from model.valid_database_model import ValidDatabase
 from service.anonymization_service import (
     anonymization_database,
     anonymization_database_rows,
-    anonymization_one_database_row,
 )
 from service.authenticate import jwt_required
-from sqlalchemy import create_engine
-
-from controller import app, db
 
 
 @app.route("/getAnonymization", methods=["GET"])
@@ -77,52 +76,34 @@ def deleteAnonymization(current_user):
         return jsonify({"message": "anonymization_not_deleted"}), 400
 
 
-@app.route("/anonymizationOneDatabaseRow", methods=["POST"])
-@jwt_required
-def anonymizationOneDatabaseRow(current_user):
-
-    # Get id of database to anonymize
-    id_db = request.json.get("id_db")
-
-    # Get table_name to encrypt
-    table_name = request.json.get("table_name")
-
-    # Get row of Client Database to anonymization
-    rows_to_anonymization = request.json.get("row_to_anonymization")
-
-    # Run anonymization
-    row_to_anonymization, status_code, response = anonymization_one_database_row(
-        id_db=id_db, table_name=table_name, row_to_anonymization=rows_to_anonymization
-    )
-
-    if not rows_to_anonymization:
-        return jsonify({"message": response}), status_code
-
-    return jsonify(rows_to_anonymization), 200
-
-
 @app.route("/anonymizationDatabaseRows", methods=["POST"])
 @jwt_required
 def anonymizationDatabaseRows(current_user):
 
-    # Get id of database to anonymize
+    # Get id of database to anonymize.
     id_db = request.json.get("id_db")
 
-    # Get table_name to encrypt
+    # Get table_name to encrypt.
     table_name = request.json.get("table_name")
 
-    # Get row of Client Database to anonymization
+    # Get row of Client Database to anonymization.
     rows_to_anonymization = request.json.get("rows_to_anonymization")
 
-    # Run anonymization
-    status_code, response = anonymization_database_rows(
-        id_db=id_db, table_name=table_name, rows_to_anonymization=rows_to_anonymization
+    # Flag to indicate if anonymized rows will be inserted or returned.
+    insert_database = request.json.get("insert_database")
+
+    # Run anonymization.
+    rows_to_anonymization, status_code, response = anonymization_database_rows(
+        id_db=id_db,
+        table_name=table_name,
+        rows_to_anonymization=rows_to_anonymization,
+        insert_database=insert_database,
     )
 
     if not rows_to_anonymization:
         return jsonify({"message": response}), status_code
 
-    return jsonify({"message": response}), status_code
+    return jsonify(rows_to_anonymization), status_code
 
 
 @app.route("/anonymizationDatabase", methods=["POST"])
