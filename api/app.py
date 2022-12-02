@@ -1,10 +1,5 @@
 import os
 
-from flask import jsonify, redirect
-from flask_migrate import Migrate
-from sqlalchemy import create_engine
-from sqlalchemy_utils import create_database, database_exists
-
 from config import (
     HOST,
     NAME_DATABASE,
@@ -25,6 +20,8 @@ from controller import (
     user_controller,
     valid_database_controller,
 )
+from flask import jsonify, redirect
+from flask_migrate import Migrate
 from model import (
     anonymization_model,
     anonymization_type_model,
@@ -34,6 +31,8 @@ from model import (
     valid_database_model,
 )
 from service.database_service import create_table_session, get_index_column_table_object
+from sqlalchemy import create_engine
+from sqlalchemy_utils import create_database, database_exists
 
 Migrate(app, db)
 
@@ -50,7 +49,6 @@ def index():
 
 @app.route("/test")
 def test():
-
     table_object, session_db = create_table_session(id_db=1, table_name="nivel1")
 
     print(table_object)
@@ -71,7 +69,6 @@ def test():
 
 
 if __name__ == "__main__":
-
     # Define public database path
     src_public_db_path = "{}://{}:{}@{}:{}/{}".format(
         TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, HOST, PORT, NAME_DATABASE

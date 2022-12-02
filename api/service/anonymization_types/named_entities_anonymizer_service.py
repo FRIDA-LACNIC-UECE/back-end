@@ -1,11 +1,10 @@
 from faker import Faker
-from sqlalchemy import select
-
 from service.database_service import (
     create_table_session,
     get_index_column_table_object,
     get_primary_key,
 )
+from sqlalchemy import select
 
 
 def anonymization_name(seed: int) -> str:

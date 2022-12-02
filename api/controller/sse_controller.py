@@ -1,7 +1,6 @@
-from flask import jsonify, request
-
 from config import HOST, PASSWORD_DATABASE, PORT, TYPE_DATABASE, USER_DATABASE
 from controller import app, db
+from flask import jsonify, request
 from model.database_model import Database, database_share_schema
 from model.valid_database_model import ValidDatabase
 from service.authenticate import jwt_required
@@ -31,7 +30,6 @@ def includeHashRows(current_user):
 @app.route("/showRowsHash", methods=["POST"])
 @jwt_required
 def showRowsHash(current_user):
-
     id_db = request.json.get("id_db")
 
     # Get show rows hash

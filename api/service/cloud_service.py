@@ -1,5 +1,3 @@
-from sqlalchemy import select
-
 from config import HOST, PASSWORD_DATABASE, PORT, TYPE_DATABASE, USER_DATABASE
 from model.database_key_model import DatabaseKey, database_key_share_schema
 from model.database_model import Database, database_share_schema
@@ -16,6 +14,7 @@ from service.database_service import (
 )
 from service.rsa_service import decrypt_dict, encrypt_database_rows, loadKeys
 from service.sse_service import generate_hash_rows
+from sqlalchemy import MetaData, Table, create_engine, func, inspect, select, update
 
 
 def row_search(
@@ -194,7 +193,6 @@ def row_search(
 def process_updates(
     id_db_user: int, id_db: int, table_name: str, primary_key_list: list
 ) -> tuple:
-
     # Check request body
     if (
         (id_db == None)
@@ -256,7 +254,6 @@ def process_updates(
         client_row = [row._asdict() for row in client_row][0]
 
         for sensitive_column in sensitive_columns:
-
             if type(client_row[sensitive_column]).__name__ == "date":
                 if anonymized_row[sensitive_column] != client_row[
                     sensitive_column

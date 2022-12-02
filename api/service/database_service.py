@@ -1,7 +1,3 @@
-from sqlalchemy import MetaData, Table, create_engine, inspect
-from sqlalchemy.orm import Session
-from sqlalchemy_utils import database_exists
-
 import service
 from config import (
     HOST,
@@ -15,7 +11,11 @@ from controller import db
 from model.anonymization_model import Anonymization, anonymizations_share_schema
 from model.database_key_model import DatabaseKey
 from model.database_model import Database, database_share_schema, databases_share_schema
+from model.user_model import User
 from model.valid_database_model import ValidDatabase, valid_databases_share_schema
+from sqlalchemy import MetaData, Table, create_engine, inspect
+from sqlalchemy.orm import Session
+from sqlalchemy_utils import database_exists
 
 
 def get_database_path(id_db: int) -> str:

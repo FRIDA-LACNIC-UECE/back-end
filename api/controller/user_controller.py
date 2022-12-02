@@ -1,6 +1,5 @@
-from flask import jsonify, request
-
 from controller import app
+from flask import jsonify, request
 from service.authenticate import jwt_required
 from service.user_service import (
     delete_user,
