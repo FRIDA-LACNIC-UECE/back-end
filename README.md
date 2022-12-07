@@ -14,6 +14,9 @@ Technologies Used
 - [Flask](https://flask.palletsprojects.com/en/2.2.x/) - Python Web Framework.
 - [SQLAlchemy](sqlalchemy.org/) - Object-Relational Mapper (ORM).
 
+Requirements
+=================
+
 Go to ./api directory using this command:
 
     cd ./api
