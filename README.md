@@ -17,6 +17,8 @@ Technologies Used
 Requirements
 =================
 
+To run this back-end project, you'll need python installed.
+
 Go to ./api directory using this command:
 
     cd ./api
