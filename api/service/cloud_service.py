@@ -1,8 +1,10 @@
-from config import HOST, PASSWORD_DATABASE, PORT, TYPE_DATABASE, USER_DATABASE
-from model.database_key_model import DatabaseKey, database_key_share_schema
-from model.database_model import Database, database_share_schema
-from service.anonymization_service import anonymization_database_rows
-from service.database_service import (
+from service.rsa_service import decrypt_dict, encrypt_database_rows, loadKeys
+from service.sse_service import generate_hash_rows
+from sqlalchemy import MetaData, Table, create_engine, func, inspect, select, update
+
+from ..model import DatabaseKey, database_key_share_schema
+from ..service.anonymization_service import anonymization_database_rows
+from ..service.database_service import (
     create_table_session,
     get_cloud_database_path,
     get_database_columns_types,
@@ -12,9 +14,6 @@ from service.database_service import (
     get_primary_key,
     get_sensitive_columns,
 )
-from service.rsa_service import decrypt_dict, encrypt_database_rows, loadKeys
-from service.sse_service import generate_hash_rows
-from sqlalchemy import MetaData, Table, create_engine, func, inspect, select, update
 
 
 def row_search(
@@ -90,7 +89,6 @@ def row_search(
             table_object=table_cloud_db,
             column_name="line_hash",
         )
-        print(index_column_to_search)
         query_sensitive_data = (
             session_cloud_db.query(table_cloud_db)
             .filter(table_cloud_db.c[index_column_to_search] == search_value)
@@ -104,9 +102,6 @@ def row_search(
 
     # Transform sensitive data query to dictionary
     dict_sensitive_data = [row._asdict() for row in query_sensitive_data][0]
-
-    print(f"....-> {query_sensitive_data}")
-    print(f"*****-> {dict_sensitive_data}")
 
     # Remove primary key and hash value
     primary_key_value = dict_sensitive_data[f"{primary_key_name}"]
@@ -154,8 +149,6 @@ def row_search(
 
     # Transform non-sensitive data query to dictionary
     dict_result_data = [row._asdict() for row in query_non_sensitive_data][0]
-    print(f"====-> {dict_decrypted_sensitive_data}")
-    print(f"$$$$-> {dict_result_data}")
 
     # Insert decrypted sensitive data in non-sensitive data dictionary
     for key in dict_decrypted_sensitive_data.keys():
@@ -237,7 +230,7 @@ def process_updates(
             search_value=primary_value,
         )
         found_row = found_row[0]
-        print(f"\n---->>> {found_row}\n")
+        print(f"\nfound_row -->> {found_row}\n")
 
         anonymized_row = found_row.copy()
         anonymized_row, status_code, _ = anonymization_database_rows(
@@ -247,20 +240,23 @@ def process_updates(
             insert_database=False,
         )
         anonymized_row = anonymized_row[0]
-        print(f"\n---->>>> {anonymized_row}\n")
 
         stmt = select(table_client_db).where(table_client_db.c[0] == primary_value)
         client_row = session_client_db.execute(stmt)
         client_row = [row._asdict() for row in client_row][0]
+        print(f"\nclient_row -->> {client_row}\n")
+        print(f"\nanonymized_row -->> {anonymized_row}\n")
 
         for sensitive_column in sensitive_columns:
             if type(client_row[sensitive_column]).__name__ == "date":
+                print("entrei1")
                 if anonymized_row[sensitive_column] != client_row[
                     sensitive_column
                 ].strftime("%Y-%m-%d"):
                     found_row[sensitive_column] = client_row[sensitive_column]
                     print(f"###TROCOU### -> {sensitive_column}")
             else:
+                print("entrei2")
                 if anonymized_row[sensitive_column] != client_row[sensitive_column]:
                     found_row[sensitive_column] = client_row[sensitive_column]
                     print(f"###TROCOU### -> {sensitive_column}")
@@ -281,6 +277,7 @@ def process_updates(
         rows_to_anonymization=rows_list.copy(),
         insert_database=True,
     )
+    print(f"\anonymized_rows -->> {anonymized_rows}\n")
 
     generate_hash_rows(
         id_db_user=id_db_user,

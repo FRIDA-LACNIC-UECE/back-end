@@ -74,15 +74,15 @@ if __name__ == "__main__":
         TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, HOST, PORT, NAME_DATABASE
     )
 
-    # Create public database
+    # Create frida database
     engine_dest_db = create_engine(src_public_db_path)
     if not database_exists(engine_dest_db.url):
         create_database(engine_dest_db.url)
 
-        # Initialize migrate
-        os.system("flask db init")
-        os.system('flask db migrate -m "Initial migration"')
-        os.system("flask db upgrade")
+        # Create database tables
+        db.drop_all()
+        db.create_all()
+        db.session.commit()
 
     # Run API
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,12 +1,13 @@
 from flask import jsonify, request
 
-from controller import app
-from service.anonymization_type_service import (
+from api import app
+
+from ..service.anonymization_type_service import (
     add_anonymization_type,
     delete_anonymization_type,
     get_anonymizations_type,
 )
-from service.authenticate import jwt_required
+from ..service.authenticate import jwt_required
 
 
 @app.route("/getAnonymizationType", methods=["GET"])
