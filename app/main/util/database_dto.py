@@ -50,7 +50,6 @@ class DatabaseDTO:
         {
             "table_names": fields.List(
                 fields.String(description="table name"),
-                required=True,
                 description="table name list",
             ),
         },
@@ -61,8 +60,17 @@ class DatabaseDTO:
         {
             "column_names": fields.List(
                 fields.String(description="column name"),
-                required=True,
                 description="column name list",
+            ),
+        },
+    )
+
+    database_sensitive_columns = api.model(
+        "database_sensitive_columns",
+        {
+            "sensitive_column_names": fields.List(
+                fields.String(description="sensitive column name"),
+                description="sensitive column name list",
             ),
         },
     )

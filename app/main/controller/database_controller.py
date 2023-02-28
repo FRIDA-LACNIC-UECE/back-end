@@ -9,6 +9,7 @@ from app.main.service import (
     get_database_columns,
     get_database_tables,
     get_databases,
+    get_sensitive_columns,
     jwt_admin_required,
     jwt_user_required,
     save_new_database,
@@ -25,6 +26,7 @@ _database_response = DatabaseDTO.database_response
 _database_list = DatabaseDTO.database_list
 _database_tables = DatabaseDTO.database_tables
 _database_columns = DatabaseDTO.database_columns
+_database_sensitive_columns = DatabaseDTO.database_sensitive_columns
 
 _default_message_response = DefaultResponsesDTO.message_response
 _validation_error_response = DefaultResponsesDTO.validation_error
@@ -135,4 +137,30 @@ class DatabaseColumns(Resource):
         """Get database column names each table by id"""
         return get_database_columns(
             database_id=database_id, table_name=table_name, current_user=current_user
+        )
+
+
+@api.route("/sensitive_columns/<int:database_id>")
+class DatabaseSensitiveColumns(Resource):
+    @api.doc("Get database sensitive columns names each table by id")
+    @api.doc(
+        "List all registered databases of each user",
+        params={
+            "table_name": {"description": "Database table name", "type": str},
+        },
+        description=f"Get database sensitive columns names each table by id",
+    )
+    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @api.response(404, "database_not_found", _default_message_response)
+    @api.marshal_with(
+        _database_sensitive_columns,
+        code=200,
+        description="get_database_sensitive_columns_names",
+    )
+    @jwt_user_required
+    def get(self, database_id: int, current_user: User):
+        """Get database sensitive columns names each table by id"""
+        params = request.args
+        return get_sensitive_columns(
+            params=params, database_id=database_id, current_user=current_user
         )

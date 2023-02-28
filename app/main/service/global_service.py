@@ -1,9 +1,7 @@
 from sqlalchemy import MetaData, Table, create_engine, inspect
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.main.config import Config
-from app.main.exceptions import DefaultException, ValidationException
-from app.main.model import AnonymizationRecord
 from app.main.service.database_service import (
     get_database,
     get_database_columns,
@@ -40,33 +38,6 @@ def get_primary_key(
     )
 
     return [key.name for key in inspect(table_object_db).primary_key][0]
-
-
-def get_sensitive_columns(database_id: int, table_name: str) -> list:
-
-    # Get anonymization records
-    anonymization_records = AnonymizationRecord.query.filter_by(
-        database_id=database_id, table=table_name
-    ).all()
-
-    if not anonymization_records:
-        raise ValidationException(
-            errors={"anonymization_record": "anonymization_record_invalid_data"},
-            message="Input payload validation failed",
-        )
-
-    sensitive_columns = []
-    ids_type_anonymization = []
-
-    # Get sensitive_columns
-    for sensitive_column in anonymization_records:
-        if sensitive_column.columns:
-            sensitive_columns += sensitive_column.columns
-            ids_type_anonymization += [sensitive_column.anonymization_type_id] * len(
-                sensitive_column.columns
-            )
-
-    return sensitive_columns
 
 
 def get_index_column_table_object(

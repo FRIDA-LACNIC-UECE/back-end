@@ -7,12 +7,11 @@ from sqlalchemy_utils import create_database, database_exists
 
 from app.main.exceptions import DefaultException
 from app.main.model import DatabaseKey
-from app.main.service.database_service import get_database
+from app.main.service.database_service import get_database, get_sensitive_columns
 from app.main.service.global_service import (
     create_table_session,
     get_cloud_database_url,
     get_primary_key,
-    get_sensitive_columns,
 )
 
 """from .database_service import (
@@ -135,7 +134,7 @@ def encrypt_database(data: dict[str, str]) -> None:
     primary_key_name = get_primary_key(database_id=database_id, table_name=table_name)
     columns_list = [primary_key_name] + get_sensitive_columns(
         database_id=database_id, table_name=table_name
-    )
+    )["sensitive_columns"]
 
     # Get public and private keys of database
     database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()

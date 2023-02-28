@@ -188,3 +188,36 @@ def get_database_columns(
         columns_names.append(str(column_name["name"]))
 
     return {"column_names": columns_names}
+
+
+def get_sensitive_columns(
+    params: ImmutableMultiDict, database_id: int, current_user: User
+) -> dict:
+
+    table_name = params.get("table_name", type=str)
+
+    client_database = get_database(database_id=database_id)
+
+    # Check user authorization
+    if client_database.user_id != current_user.id:
+        raise DefaultException("unauthorized_user", code=401)
+
+    anonymization_records = AnonymizationRecord.query.filter(
+        AnonymizationRecord.database_id == database_id,
+        AnonymizationRecord.table == table_name,
+    ).all()
+
+    if not anonymization_records:
+        raise ValidationException(
+            errors={"database": "database_invalid_data"},
+            message="Input payload validation failed",
+        )
+
+    sensitive_columns = []
+
+    # Get sensitive_columns
+    for sensitive_column in anonymization_records:
+        if sensitive_column.columns:
+            sensitive_columns += sensitive_column.columns
+
+    return {"sensitive_column_names": sensitive_columns}

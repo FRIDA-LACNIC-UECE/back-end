@@ -4,14 +4,13 @@ import pandas as pd
 from sqlalchemy import func, select, update
 
 from app.main.exceptions import DefaultException
-from app.main.service.database_service import get_database_url
+from app.main.service.database_service import get_database_url, get_sensitive_columns
 from app.main.service.global_service import (
     create_table_session,
     get_cloud_database_url,
     get_database,
     get_index_column_table_object,
     get_primary_key,
-    get_sensitive_columns,
 )
 
 
@@ -57,7 +56,7 @@ def generate_hash_rows(
     # Get sensitve columns of table
     client_columns_list = [primary_key_name] + get_sensitive_columns(
         database_id=database_id, table_name=table_name
-    )
+    )["sensitive_columns"]
 
     # Get cloud database url
     cloud_database_url = get_cloud_database_url(database_id=database_id)
@@ -104,7 +103,7 @@ def generate_hash_column(user_id: int, database_id: int, table_name: str) -> Non
     # Get sensitve columns of table
     client_columns_list = [primary_key_name] + get_sensitive_columns(
         database_id=database_id, table_name=table_name
-    )
+    )["sensitive_columns"]
 
     # Create table object of Client Database and
     # session of Client Database to run sql operations
