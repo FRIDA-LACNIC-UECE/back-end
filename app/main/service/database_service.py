@@ -2,6 +2,7 @@ import math
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import joinedload
+from sqlalchemy_utils import database_exists
 from werkzeug.datastructures import ImmutableMultiDict
 
 from app.main import db
@@ -190,7 +191,93 @@ def get_database_columns(
     return {"column_names": columns_names}
 
 
-def get_sensitive_columns(
+def get_database_columns(
+    database_id: int = None,
+    database_url: str = None,
+    table_name: str = None,
+    current_user: User = None,
+) -> dict[list[str]]:
+
+    if database_id:
+        database_url = get_database_url(database_id=database_id)
+
+    if current_user and database_id:
+        database = get_database(database_id=database_id)
+        if database.user_id != current_user.id:
+            raise DefaultException("unauthorized_user", code=401)
+
+    try:
+        engine_database = create_engine(database_url)
+    except:
+        raise ValidationException(
+            errors={"database": "database_invalid_data"},
+            message="Input payload validation failed",
+        )
+
+    # Get database columns
+    columns_names = []
+
+    columns_table = inspect(engine_database).get_columns(table_name)
+
+    for column_name in columns_table:
+        columns_names.append(str(column_name["name"]))
+
+    return {"column_names": columns_names}
+
+
+"""def get_database_columns_types(
+    database_id: int, table_name: str
+) -> tuple[None, int, str] | tuple[dict[str, str], int, str]:
+
+    # Get database path by id
+    if id_db:
+        src_db_path = get_database_path(id_db=id_db)
+        if not src_db_path:
+            return (None, 404, "database_not_found")
+
+    # Check user authorization
+    if get_database_user_id(id_db=id_db) != id_db_user:
+        return (None, 401, "user_unauthorized")
+
+    # Create connection to database
+    engine_db = create_engine(src_db_path)
+
+    # Get columns and their types
+    columns = {}
+
+    insp = inspect(engine_db)
+    columns_table = insp.get_columns(table_name)
+
+    for c in columns_table:
+        columns[f"{c['name']}"] = str(c["type"])
+
+    return (columns, 200, None)"""
+
+
+def get_sensitive_columns(database_id: int, table_name: str) -> dict:
+
+    anonymization_records = AnonymizationRecord.query.filter(
+        AnonymizationRecord.database_id == database_id,
+        AnonymizationRecord.table == table_name,
+    ).all()
+
+    if not anonymization_records:
+        raise ValidationException(
+            errors={"database": "database_invalid_data"},
+            message="Input payload validation failed",
+        )
+
+    sensitive_columns = []
+
+    # Get sensitive_columns
+    for sensitive_column in anonymization_records:
+        if sensitive_column.columns:
+            sensitive_columns += sensitive_column.columns
+
+    return {"sensitive_column_names": sensitive_columns}
+
+
+def get_route_sensitive_columns(
     params: ImmutableMultiDict, database_id: int, current_user: User
 ) -> dict:
 
@@ -221,3 +308,21 @@ def get_sensitive_columns(
             sensitive_columns += sensitive_column.columns
 
     return {"sensitive_column_names": sensitive_columns}
+
+
+def test_database_connection(database_id: int, current_user: User) -> None:
+
+    database = get_database(database_id=database_id)
+
+    if database.user_id != current_user.id:
+        raise DefaultException("unauthorized_user", code=401)
+
+    database_url = get_database_url(database_id=database_id)
+
+    try:
+        engine = create_engine(database_url)
+
+        if not database_exists(engine.url):
+            raise DefaultException("database_not_connected", code=409)
+    except:
+        raise DefaultException("database_not_connected", code=409)

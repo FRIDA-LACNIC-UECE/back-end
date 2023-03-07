@@ -56,7 +56,7 @@ def generate_hash_rows(
     # Get sensitve columns of table
     client_columns_list = [primary_key_name] + get_sensitive_columns(
         database_id=database_id, table_name=table_name
-    )["sensitive_columns"]
+    )["sensitive_column_names"]
 
     # Get cloud database url
     cloud_database_url = get_cloud_database_url(database_id=database_id)
@@ -103,7 +103,7 @@ def generate_hash_column(user_id: int, database_id: int, table_name: str) -> Non
     # Get sensitve columns of table
     client_columns_list = [primary_key_name] + get_sensitive_columns(
         database_id=database_id, table_name=table_name
-    )["sensitive_columns"]
+    )["sensitive_column_names"]
 
     # Create table object of Client Database and
     # session of Client Database to run sql operations
@@ -173,7 +173,7 @@ def include_hash_rows(
 
     # Create table object of Cloud Database and
     # session of Cloud Database to run sql operations
-    table_cloud_db, session_cloud_db = create_table_session(
+    table_cloud_database, session_cloud_database = create_table_session(
         database_url=cloud_database_url,
         table_name=table_name,
     )
@@ -183,70 +183,18 @@ def include_hash_rows(
 
     # Get primary key index in table object
     index_primary_key = get_index_column_table_object(
-        table_object=table_cloud_db, column_name=primary_key_name
+        table_object=table_cloud_database, column_name=primary_key_name
     )
 
     for row in hash_rows:
         statement = (
-            update(table_cloud_db)
-            .where(table_cloud_db.c[index_primary_key] == row[primary_key_name])
+            update(table_cloud_database)
+            .where(table_cloud_database.c[index_primary_key] == row[primary_key_name])
             .values(line_hash=row["line_hash"])
         )
 
-        session_cloud_db.execute(statement)
+        session_cloud_database.execute(statement)
 
-    session_cloud_db.commit()
+    session_cloud_database.commit()
 
     return (200, "hash_included")
-
-
-def show_rows_hash(
-    user_id: int, database_id: int, table_name, page: int, per_page: int
-) -> tuple:
-
-    # Get clint database
-    client_database = get_database(database_id=database_id)
-
-    # Get cloud database url
-    src_cloud_db_path = get_cloud_database_url(database_id=database_id)
-
-    # Check authorization user
-    if client_database.user_id != user_id:
-        raise DefaultException("unauthorized_user", code=401)
-
-    # Get columns to encrypt
-    primary_key_name = get_primary_key(database_id=database_id, table_name=table_name)
-
-    # Create table object of Cloud Database and
-    # session of Cloud Database to run sql operations
-    table_cloud_db, session_cloud_db = create_table_session(
-        src_db_path=src_cloud_db_path,
-        table_name=table_name,
-        columns_list=[primary_key_name, "line_hash"],
-    )
-
-    # Get limits primary key value
-    primary_key_value_min_limit = session_cloud_db.query(
-        func.min(table_cloud_db.c[0])
-    ).scalar()
-    primary_key_value_max_limit = session_cloud_db.query(
-        func.max(table_cloud_db.c[0])
-    ).scalar()
-
-    # Run paginate
-    query = session_cloud_db.query(table_cloud_db).filter(
-        table_cloud_db.c[0] >= (page * per_page),
-        table_cloud_db.c[0] <= ((page + 1) * per_page),
-    )
-
-    query_results = {}
-    query_results["primary_key"] = []
-    query_results["row_hash"] = []
-    for row in query:
-        query_results["primary_key"].append(row[0])
-        query_results["row_hash"].append(row[1])
-
-    session_cloud_db.commit()
-    session_cloud_db.close()
-
-    return (query_results, primary_key_value_min_limit, primary_key_value_max_limit)

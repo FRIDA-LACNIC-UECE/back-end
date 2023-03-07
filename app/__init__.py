@@ -3,6 +3,7 @@
 from flask_restx import Api
 
 from .main.controller import (
+    agent_ns,
     anonymization_ns,
     anonymization_record_ns,
     anonymization_type_ns,
@@ -35,6 +36,7 @@ api.add_namespace(database_encryption_ns, path="/database_encryption")
 api.add_namespace(anonymization_record_ns, path="/anonymization_record")
 api.add_namespace(anonymization_ns, path="/anonymization")
 api.add_namespace(sql_log_ns, path="/sql_log")
+api.add_namespace(agent_ns, path="/agent")
 
 api.add_namespace(DefaultResponsesDTO.api)
 

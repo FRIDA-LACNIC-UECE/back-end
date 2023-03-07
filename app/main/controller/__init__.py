@@ -1,3 +1,4 @@
+from .agent_controller import *
 from .anonymization_controller import *
 from .anonymization_record_controller import *
 from .anonymization_type_controller import *

@@ -1,3 +1,4 @@
+from .agent_dto import *
 from .anonymization_dto import *
 from .anonymization_record_dto import *
 from .anonymization_type_dto import *

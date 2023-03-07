@@ -134,7 +134,7 @@ def encrypt_database(data: dict[str, str]) -> None:
     primary_key_name = get_primary_key(database_id=database_id, table_name=table_name)
     columns_list = [primary_key_name] + get_sensitive_columns(
         database_id=database_id, table_name=table_name
-    )["sensitive_columns"]
+    )["sensitive_column_names"]
 
     # Get public and private keys of database
     database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()

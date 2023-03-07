@@ -9,10 +9,11 @@ from app.main.service import (
     get_database_columns,
     get_database_tables,
     get_databases,
-    get_sensitive_columns,
+    get_route_sensitive_columns,
     jwt_admin_required,
     jwt_user_required,
     save_new_database,
+    test_database_connection,
     update_database,
 )
 from app.main.util import DatabaseDTO, DefaultResponsesDTO
@@ -124,9 +125,16 @@ class DatabaseTables(Resource):
         return get_database_tables(database_id=database_id, current_user=current_user)
 
 
-@api.route("/column_names/<int:database_id>/<string:table_name>")
+@api.route("/column_names/<int:database_id>")
 class DatabaseColumns(Resource):
-    @api.doc("Get database column names each table by id")
+    @api.doc()
+    @api.doc(
+        "Get database column names each table by id",
+        params={
+            "table_name": {"description": "Database table name", "type": str},
+        },
+        description="Get database column names each table by id.",
+    )
     @api.marshal_with(
         _database_columns, code=200, description="get_database_column_names"
     )
@@ -135,6 +143,7 @@ class DatabaseColumns(Resource):
     @jwt_user_required
     def get(self, database_id: int, table_name: str, current_user: User):
         """Get database column names each table by id"""
+        params = request.args
         return get_database_columns(
             database_id=database_id, table_name=table_name, current_user=current_user
         )
@@ -161,6 +170,19 @@ class DatabaseSensitiveColumns(Resource):
     def get(self, database_id: int, current_user: User):
         """Get database sensitive columns names each table by id"""
         params = request.args
-        return get_sensitive_columns(
+        return get_route_sensitive_columns(
             params=params, database_id=database_id, current_user=current_user
         )
+
+
+@api.route("/test_database_connection/<int:database_id>")
+class TestDatabaseConnection(Resource):
+    @api.doc("Test database connection")
+    @api.response(200, "database_connected", _default_message_response)
+    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @jwt_user_required
+    def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
+        """ "Test database connection"""
+        test_database_connection(database_id=database_id, current_user=current_user)
+        return {"message": "database_connected"}, 200

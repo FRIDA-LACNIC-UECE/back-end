@@ -15,7 +15,7 @@ _default_message_response = DefaultResponsesDTO.message_response
 class DatabaseEncryption(Resource):
     @api.doc("Encrypt database")
     @api.expect(_database_encryption, validate=True)
-    @api.response(201, "database_encrypted", _default_message_response)
+    @api.response(200, "database_encrypted", _default_message_response)
     @api.response(400, "Input payload validation failed", _default_message_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @jwt_user_required
@@ -24,4 +24,4 @@ class DatabaseEncryption(Resource):
         data = request.json
         data["user_id"] = current_user.id
         encrypt_database(data=data)
-        return {"message": "database_encrypted"}, 201
+        return {"message": "database_encrypted"}, 200
