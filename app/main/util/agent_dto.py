@@ -1,7 +1,7 @@
 from flask_restx import Namespace, fields
 
 
-class SseDTO:
+class AgentDTO:
     api = Namespace("agent", description="Agent related operations")
 
     _row_hash_list = api.model(
@@ -27,6 +27,17 @@ class SseDTO:
             ),
             "primary_key_value_max_limit": fields.Integer(
                 description="primary key value max limit"
+            ),
+        },
+    )
+
+    process_deletions = api.model(
+        "process_deletions",
+        {
+            "table_name": fields.String(description="database table name"),
+            "primary_key_list": fields.List(
+                fields.Integer(description="primary key value"),
+                description="primary key list",
             ),
         },
     )

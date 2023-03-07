@@ -19,8 +19,7 @@ from app.main.service.global_service import (
     get_primary_key,
 )
 
-
-def row_search(
+"""def row_search(
     database_id: int,
     table_name: str,
     search_type: str,
@@ -156,7 +155,7 @@ def row_search(
         else:
             pass
 
-    return (dict_result_data, 200, "row_found")
+    return (dict_result_data, 200, "row_found")"""
 
 
 def show_rows_hash(
@@ -223,3 +222,35 @@ def show_rows_hash(
         "primary_key_value_min_limit": primary_key_value_min_limit,
         "primary_key_value_max_limit": primary_key_value_max_limit,
     }
+
+
+def process_deletions(
+    database_id: int, data: dict[str, str], current_user: User
+) -> None:
+
+    table_name = data.get("table_name")
+    primary_key_list = data.get("primary_key_list")
+
+    # Get client database
+    client_database = get_database(database_id=database_id)
+
+    # Check user authorization
+    if client_database.user_id != current_user.id:
+        raise DefaultException("unauthorized_user", code=401)
+
+    # Get database information by id
+    cloud_database_url = get_cloud_database_url(database_id=database_id)
+
+    # Create table object of Cloud Database and
+    # session of Cloud Database to run sql operations
+    table_cloud_database, session_cloud_database = create_table_session(
+        database_url=cloud_database_url, table_name=table_name
+    )
+
+    for primary_key in primary_key_list:
+        session_cloud_database.query(table_cloud_database).filter(
+            table_cloud_database.c[0] == primary_key
+        ).delete()
+
+    session_cloud_database.commit()
+    session_cloud_database.close()
