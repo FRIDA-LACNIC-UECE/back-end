@@ -224,6 +224,115 @@ def show_rows_hash(
     }
 
 
+"""def process_updates(
+    id_db_user: int, id_db: int, table_name: str, primary_key_list: list
+) -> tuple:
+
+    # Check request body
+    if (
+        (id_db == None)
+        or (table_name == None)
+        or (primary_key_list == None)
+        or (len(primary_key_list) == 0)
+    ):
+        return (400, "invalid_updates_data5")
+
+    # Get client database path
+    src_client_db_path = get_database_path(id_db)
+    if not src_client_db_path:
+        return (404, "database_not_found")
+
+    # Check user authorization
+    if get_database_user_id(id_db=id_db) != id_db_user:
+        return (401, "user_unauthorized")
+
+    # Create table object of Client Database and
+    # session of Client Database to run sql operations
+    table_client_db, session_client_db = create_table_session(
+        src_db_path=src_client_db_path, table_name=table_name
+    )
+
+    # Get database information by id
+    src_cloud_db_path = get_cloud_database_path(id_db=id_db)
+
+    # Get sensitive columns of Client Database
+    sensitive_columns = get_sensitive_columns(
+        id_db_user=id_db_user, id_db=id_db, table_name=table_name
+    )[0]
+
+    # Get original rows ​​that have been updated
+    rows_list = []
+
+    for primary_value in primary_key_list:
+        found_row = row_search(
+            id_db_user=id_db_user,
+            id_db=id_db,
+            table_name=table_name,
+            search_type="primary_key",
+            search_value=primary_value,
+        )
+        found_row = found_row[0]
+        print(f"\nfound_row -->> {found_row}\n")
+
+        anonymized_row = found_row.copy()
+        anonymized_row, status_code, _ = anonymization_database_rows(
+            id_db=id_db,
+            table_name=table_name,
+            rows_to_anonymization=[anonymized_row],
+            insert_database=False,
+        )
+        anonymized_row = anonymized_row[0]
+
+        stmt = select(table_client_db).where(table_client_db.c[0] == primary_value)
+        client_row = session_client_db.execute(stmt)
+        client_row = [row._asdict() for row in client_row][0]
+        print(f"\nclient_row -->> {client_row}\n")
+        print(f"\nanonymized_row -->> {anonymized_row}\n")
+
+        for sensitive_column in sensitive_columns:
+
+            if type(client_row[sensitive_column]).__name__ == "date":
+                print("entrei1")
+                if anonymized_row[sensitive_column] != client_row[
+                    sensitive_column
+                ].strftime("%Y-%m-%d"):
+                    found_row[sensitive_column] = client_row[sensitive_column]
+                    print(f"###TROCOU### -> {sensitive_column}")
+            else:
+                print("entrei2")
+                if anonymized_row[sensitive_column] != client_row[sensitive_column]:
+                    found_row[sensitive_column] = client_row[sensitive_column]
+                    print(f"###TROCOU### -> {sensitive_column}")
+
+        rows_list.append(found_row)
+
+    encrypt_database_rows(
+        id_db_user=id_db_user,
+        id_db=id_db,
+        rows_to_encrypt=rows_list.copy(),
+        table_name=table_name,
+        update_database=True,
+    )
+
+    anonymized_rows, _, _ = anonymization_database_rows(
+        id_db=id_db,
+        table_name=table_name,
+        rows_to_anonymization=rows_list.copy(),
+        insert_database=True,
+    )
+    print(f"\anonymized_rows -->> {anonymized_rows}\n")
+
+    generate_hash_rows(
+        id_db_user=id_db_user,
+        id_db=id_db,
+        table_name=table_name,
+        result_query=anonymized_rows,
+    )
+
+    if status_code == 200:
+        return (200, "updates_processed")"""
+
+
 def process_deletions(
     database_id: int, data: dict[str, str], current_user: User
 ) -> None:

@@ -2,12 +2,16 @@ import base64
 
 import pandas as pd
 import rsa
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, insert, select, update
 from sqlalchemy_utils import create_database, database_exists
 
 from app.main.exceptions import DefaultException
-from app.main.model import DatabaseKey
-from app.main.service.database_service import get_database, get_sensitive_columns
+from app.main.model import DatabaseKey, User
+from app.main.service.database_service import (
+    get_database,
+    get_database_url,
+    get_sensitive_columns,
+)
 from app.main.service.global_service import (
     create_table_session,
     get_cloud_database_url,
@@ -106,6 +110,93 @@ def decrypt_dict(data_dict, key):
         data_dict[keys] = decrypt(data_dict[keys], key)
 
     return data_dict
+
+
+def encrypt_database_rows(
+    database_id: int,
+    data: dict[str, str],
+    current_user: User,
+) -> tuple[int, str]:
+
+    table_name = data.get("table_name")
+    rows_to_encrypt = data.get("rows_to_encrypt")
+    update_database = data.get("update_database")
+
+    # Get client database
+    client_database = get_database(database_id=database_id)
+
+    # Check user authorization
+    if client_database.user_id != current_user.id:
+        raise DefaultException("user_unauthorized", code=401)
+
+    # Get client database url
+    client_database_url = get_database_url(database_id=database_id)
+
+    # Create cloud database if not exist
+    cloud_database_url = get_cloud_database_url(database_id=database_id)
+    engine_cloud_database = create_engine(url=cloud_database_url)
+    if not database_exists(url=engine_cloud_database.url):
+        create_database(url=engine_cloud_database.url)
+
+    # Get public and private keys of database
+    database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()
+
+    if not database_keys:
+        raise DefaultException("database_keys_not_found", code=404)
+
+    # Load rsa keys
+    public_key, _ = load_keys(
+        public_key_str=database_keys.public_key,
+        private_key_str=database_keys.private_key,
+    )
+
+    # Get columns to encrypt
+    primary_key_name = get_primary_key(database_id=database_id, table_name=table_name)
+    columns_list = [primary_key_name] + get_sensitive_columns(
+        database_id=database_id, table_name=table_name
+    )["sensitive_column_names"]
+
+    # Create table object of Cloud Database and
+    # session of Cloud Database to run sql operations
+    table_cloud_database, session_cloud_database = create_table_session(
+        database_url=engine_cloud_database.url,
+        table_name=table_name,
+        columns_list=columns_list,
+    )
+
+    if update_database:
+        for row in rows_to_encrypt:
+            row = {key: row[key] for key in columns_list}
+
+            primary_key_value = row[primary_key_name]
+            row.pop(primary_key_name, None)
+
+            row = encrypt_dict(data_dict=row, key=public_key)
+
+            statement = (
+                update(table_cloud_database)
+                .where(table_cloud_database.c[0] == primary_key_value)
+                .values(row)
+            )
+
+            session_cloud_database.execute(statement)
+
+        session_cloud_database.commit()
+    else:
+        for row in rows_to_encrypt:
+
+            primary_key_value = row[primary_key_name]
+            row.pop(primary_key_name, None)
+
+            row = encrypt_dict(data_dict=row, key=public_key)
+
+            row[primary_key_name] = primary_key_value
+
+            statement = insert(table_cloud_database).values(row)
+
+            session_cloud_database.execute(statement)
+
+        session_cloud_database.commit()
 
 
 def encrypt_database(data: dict[str, str]) -> None:
