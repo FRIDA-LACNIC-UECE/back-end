@@ -112,7 +112,7 @@ def decrypt_dict(data_dict, key):
     return data_dict
 
 
-def encrypt_database_rows(
+def encrypt_database_row(
     database_id: int,
     data: dict[str, str],
     current_user: User,
@@ -199,15 +199,16 @@ def encrypt_database_rows(
         session_cloud_database.commit()
 
 
-def encrypt_database(data: dict[str, str]) -> None:
-    user_id = data.get("user_id")
-    database_id = data.get("database_id")
+def encrypt_database(
+    database_id: int, data: dict[str, str], current_user: User
+) -> None:
+
     table_name = data.get("table_name")
 
     # Get client database url
     database = get_database(database_id=database_id)
 
-    if database.user_id != user_id:
+    if database.user_id != current_user.id:
         raise DefaultException("unauthorized_user", code=401)
 
     # Create cloud database if not exist

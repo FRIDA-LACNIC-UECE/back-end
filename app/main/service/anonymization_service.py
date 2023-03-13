@@ -15,6 +15,114 @@ from app.main.service.database_service import get_database, get_database_url
 from app.main.service.sse_service import generate_hash_column
 
 
+def anonymization_database_rows(
+    database_id: int, data: dict[str, str], current_user: User
+) -> tuple:
+
+    table_name = data.get("table_name")
+    rows_to_anonymization = data.get("rows_to_anonymization")
+    insert_database = data.get("insert_database")
+
+    client_database = get_database(database_id=database_id)
+
+    if client_database.user_id != current_user.id:
+        raise DefaultException("unauthorized_user", code=401)
+
+    client_database_url = get_database_url(database_id=database_id)
+
+    # Get chosen columns
+    anonymization_records = AnonymizationRecord.query.filter_by(
+        database_id=database_id, table=table_name
+    ).all()
+
+    if not anonymization_records:
+        raise ValidationException(
+            errors={"anonymization_record": "anonymization_record_invalid_data"},
+            message="Input payload validation failed",
+        )
+
+    # Run anonymization for each anonymization types
+    for anonymization_record in anonymization_records:
+
+        # Get anonymization type name by id
+        anonymization_type_name = (
+            AnonymizationType.query.filter_by(
+                id=anonymization_record.anonymization_type_id
+            )
+            .first()
+            .name
+        )
+
+        if not anonymization_record.columns:
+            continue
+
+        # Run anonymization
+        if anonymization_type_name == "named_entities_anonymizer":
+            named_entities_anonymizer_service.anonymization_database_rows(
+                src_client_db_path=client_database_url,
+                table_name=table_name,
+                columns_to_anonymize=anonymization_record.columns,
+                rows_to_anonymize=rows_to_anonymization,
+                insert_database=insert_database,
+            )
+            # print("\n named_entities_anonymizer anonimizando\n")
+
+        elif anonymization_type_name == "date_anonymizer":
+            date_anonymizer_service.anonymization_database_rows(
+                src_client_db_path=client_database_url,
+                table_name=table_name,
+                columns_to_anonymize=anonymization_record.columns,
+                rows_to_anonymize=rows_to_anonymization,
+                insert_database=insert_database,
+            )
+            # print("\n date_anonymizer anonimizando\n")
+
+        elif anonymization_type_name == "email_anonymizer":
+            email_anonymizer_service.anonymization_database_rows(
+                src_client_db_path=client_database_url,
+                table_name=table_name,
+                columns_to_anonymize=anonymization_record.columns,
+                rows_to_anonymize=rows_to_anonymization,
+                insert_database=insert_database,
+            )
+            # print("\n email_anonymizer anonimizando\n")
+
+        elif anonymization_type_name == "ip_anonymizer":
+            ip_anonymizer_service.anonymization_database_rows(
+                src_client_db_path=client_database_url,
+                table_name=table_name,
+                columns_to_anonymize=anonymization_record.columns,
+                rows_to_anonymize=rows_to_anonymization,
+                insert_database=insert_database,
+            )
+            # print("\n ip_anonymizer anonimizando\n")
+
+        elif anonymization_type_name == "rg_anonymizer":
+            rg_anonymizer_service.anonymization_database_rows(
+                src_client_db_path=client_database_url,
+                table_name=table_name,
+                columns_to_anonymize=anonymization_record.columns,
+                rows_to_anonymize=rows_to_anonymization,
+                insert_database=insert_database,
+            )
+            # print("\n rg_anonymizer anonimizando\n")
+
+        elif anonymization_type_name == "cpf_anonymizer":
+            cpf_anonymizer_service.anonymization_database_rows(
+                src_client_db_path=client_database_url,
+                table_name=table_name,
+                columns_to_anonymize=anonymization_record.columns,
+                rows_to_anonymize=rows_to_anonymization,
+                insert_database=insert_database,
+            )
+            # print("\n cpf_anonymizer anonimizando\n")
+
+        else:
+            pass
+
+    return {"rows_anonymized": rows_to_anonymization}
+
+
 def anonymization_table(database_url: str, database_id: int, table_name: str) -> int:
 
     # Get chosen columns
@@ -98,9 +206,12 @@ def anonymization_table(database_url: str, database_id: int, table_name: str) ->
     return 200
 
 
-def anonymization_database(current_user: User, data: dict[str, str]) -> None:
+def anonymization_database(
+    database_id: int,
+    data: dict[str, str],
+    current_user: User,
+) -> None:
 
-    database_id = data.get("database_id")
     table_name = data.get("table_name")
 
     client_database = get_database(database_id=database_id)

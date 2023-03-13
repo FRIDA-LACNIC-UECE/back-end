@@ -6,12 +6,12 @@ from werkzeug.datastructures import ImmutableMultiDict
 
 from app.main.exceptions import DefaultException
 from app.main.model import DatabaseKey, User
-from app.main.service.database_encryption_service import decrypt_dict, load_keys
 from app.main.service.database_service import (
     get_database,
     get_database_url,
     get_sensitive_columns,
 )
+from app.main.service.encryption_service import decrypt_dict, load_keys
 from app.main.service.global_service import (
     create_table_session,
     get_cloud_database_url,
