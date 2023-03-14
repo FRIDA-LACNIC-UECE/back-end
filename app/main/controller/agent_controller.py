@@ -1,7 +1,12 @@
 from flask import request
 from flask_restx import Resource
 
-from app.main.service import jwt_user_required, process_deletions, show_rows_hash
+from app.main.service import (
+    include_hash_rows,
+    jwt_user_required,
+    process_deletions,
+    show_rows_hash,
+)
 from app.main.util import AgentDTO, DefaultResponsesDTO
 
 agent_ns = AgentDTO.api
@@ -48,6 +53,25 @@ class ShowRowsHash(Resource):
         return show_rows_hash(
             params=params, database_id=database_id, current_user=current_user
         )
+
+
+@api.route("/include_hash_rows/<int:database_id>")
+class IncludeHasRows(Resource):
+    @api.doc("Include hash of new rows")
+    @api.expect(_process_deletions, validate=True)
+    @api.response(200, "hash_rows_included", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
+    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @jwt_user_required
+    def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
+        """Include hash of new rows"""
+        data = request.json
+        include_hash_rows(
+            database_id=database_id,
+            data=data,
+            current_user=current_user,
+        )
+        return {"message": "hash_rows_included"}, 200
 
 
 @api.route("/process_deletions/<int:database_id>")

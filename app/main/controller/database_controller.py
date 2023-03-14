@@ -171,7 +171,7 @@ class DatabaseSensitiveColumns(Resource):
         """Get database sensitive columns names each table by id"""
         params = request.args
         return get_route_sensitive_columns(
-            params=params, database_id=database_id, current_user=current_user
+            database_id=database_id, params=params, current_user=current_user
         )
 
 

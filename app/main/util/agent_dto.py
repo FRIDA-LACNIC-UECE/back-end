@@ -1,5 +1,7 @@
 from flask_restx import Namespace, fields
 
+from app.main.service import Dictionary
+
 
 class AgentDTO:
     api = Namespace("agent", description="Agent related operations")
@@ -27,6 +29,19 @@ class AgentDTO:
             ),
             "primary_key_value_max_limit": fields.Integer(
                 description="primary key value max limit"
+            ),
+        },
+    )
+
+    include_hash_rows = api.model(
+        "include_hash_rows",
+        {
+            "table_name": fields.String(
+                required=True, description="table name to encryption"
+            ),
+            "hash_rows": fields.List(
+                Dictionary(attribute="hash row", description="hash row"),
+                description="hash rows",
             ),
         },
     )

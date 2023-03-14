@@ -6,13 +6,9 @@ from app.main.service import Dictionary
 class AnonymizationDTO:
     api = Namespace("anonymization", description="Anonymization operations")
 
-    database_rows_encryption = api.model(
-        "database_rows_encryption",
+    database_rows_anonymization = api.model(
+        "database_rows_anonymization",
         {
-            "database_id": fields.Integer(
-                required=True,
-                description="database id to anonymization",
-            ),
             "table_name": fields.String(
                 required=True, description="table name to anonymization"
             ),
@@ -27,12 +23,9 @@ class AnonymizationDTO:
         },
     )
 
-    anonymization_database = api.model(
-        "anonymization_database",
+    database_anonymization = api.model(
+        "database_anonymization",
         {
-            "database_id": fields.Integer(
-                required=True, description="database relationship"
-            ),
             "table_name": fields.String(
                 required=True, description="anonymization record table name"
             ),

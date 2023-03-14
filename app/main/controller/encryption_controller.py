@@ -1,7 +1,7 @@
 from flask import request
 from flask_restx import Resource
 
-from app.main.service import encrypt_database, jwt_user_required
+from app.main.service import encrypt_database, encrypt_database_row, jwt_user_required
 from app.main.util import DefaultResponsesDTO, EncryptionDTO
 
 encryption_ns = EncryptionDTO.api
@@ -12,7 +12,7 @@ _database_rows_encryption = EncryptionDTO.database_rows_encryption
 _default_message_response = DefaultResponsesDTO.message_response
 
 
-@api.route("/database")
+@api.route("/database/<int:database_id>")
 class DatabaseEncryption(Resource):
     @api.doc("Encrypt database")
     @api.expect(_database_encryption, validate=True)
@@ -20,25 +20,25 @@ class DatabaseEncryption(Resource):
     @api.response(400, "Input payload validation failed", _default_message_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @jwt_user_required
-    def post(self, current_user) -> tuple[dict[str, str], int]:
+    def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
         """Encrypt database"""
         data = request.json
-        data["user_id"] = current_user.id
-        encrypt_database(data=data)
+        encrypt_database(database_id=database_id, data=data, current_user=current_user)
         return {"message": "database_encrypted"}, 200
 
 
-@api.route("/database_row")
-class DatabaseRowEncryption(Resource):
-    @api.doc("Encrypt database row")
+@api.route("/database_rows/<int:database_id>")
+class DatabaseRowsEncryption(Resource):
+    @api.doc("Encrypt database rows")
     @api.expect(_database_rows_encryption, validate=True)
-    @api.response(200, "database_encrypted", _default_message_response)
+    @api.response(200, "database_rows_encrypted", _default_message_response)
     @api.response(400, "Input payload validation failed", _default_message_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @jwt_user_required
-    def post(self, current_user) -> tuple[dict[str, str], int]:
-        """Encrypt database"""
+    def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
+        """Encrypt database rows"""
         data = request.json
-        data["user_id"] = current_user.id
-        encrypt_database(data=data)
-        return {"message": "database_encrypted"}, 200
+        encrypt_database_row(
+            database_id=database_id, data=data, current_user=current_user
+        )
+        return {"message": "database_rows_encrypted"}, 200

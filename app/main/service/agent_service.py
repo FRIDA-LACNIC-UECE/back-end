@@ -224,6 +224,50 @@ def show_rows_hash(
     }
 
 
+def include_hash_rows(
+    database_id: int, data: dict[str, str], current_user: User
+) -> tuple:
+
+    table_name = data.get("table_name")
+    hash_rows = data.get("hash_rows")
+
+    # Get client database
+    database = get_database(database_id=database_id)
+
+    # Get Cloud Database Url
+    cloud_database_url = get_cloud_database_url(database_id=database_id)
+
+    # Check user authorization
+    if database.user_id != current_user.id:
+        raise DefaultException("unauthorized_user", code=401)
+
+    # Create table object of Cloud Database and
+    # session of Cloud Database to run sql operations
+    table_cloud_database, session_cloud_database = create_table_session(
+        database_url=cloud_database_url,
+        table_name=table_name,
+    )
+
+    # Get primary key column name
+    primary_key_name = get_primary_key(database_id=database_id, table_name=table_name)
+
+    # Get primary key index in table object
+    index_primary_key = get_index_column_table_object(
+        table_object=table_cloud_database, column_name=primary_key_name
+    )
+
+    for row in hash_rows:
+        statement = (
+            update(table_cloud_database)
+            .where(table_cloud_database.c[index_primary_key] == row[primary_key_name])
+            .values(line_hash=row["line_hash"])
+        )
+
+        session_cloud_database.execute(statement)
+
+    session_cloud_database.commit()
+
+
 """def process_updates(
     id_db_user: int, id_db: int, table_name: str, primary_key_list: list
 ) -> tuple:

@@ -9,10 +9,6 @@ class EncryptionDTO:
     database_rows_encryption = api.model(
         "database_rows_encryption",
         {
-            "database_id": fields.Integer(
-                required=True,
-                description="database id to encryption",
-            ),
             "table_name": fields.String(
                 required=True, description="table name to encryption"
             ),
@@ -27,10 +23,6 @@ class EncryptionDTO:
     database_encryption = api.model(
         "database_encryption",
         {
-            "database_id": fields.Integer(
-                required=True,
-                description="database id to encryption",
-            ),
             "table_name": fields.String(
                 required=True, description="table name to encryption"
             ),
