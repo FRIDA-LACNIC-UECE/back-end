@@ -1,5 +1,7 @@
 from flask_restx import Namespace, fields
 
+from app.main.util.valid_database_dto import ValidDatabaseDTO
+
 
 class DatabaseDTO:
     api = Namespace("database", description="Database related operations")
@@ -34,8 +36,9 @@ class DatabaseDTO:
         {
             "id": fields.Integer(description="database id"),
             "user_id": fields.Integer(description="user relationship"),
-            "valid_database_id": fields.Integer(
-                description="valid database relationship"
+            "valid_database": fields.Nested(
+                ValidDatabaseDTO.valid_database_response,
+                description="valid database relationship",
             ),
             "name": fields.String(description="database name"),
             "host": fields.String(description="database host"),

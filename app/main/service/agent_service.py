@@ -300,7 +300,7 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
     # Create table object of Client Database and
     # session of Client Database to run sql operations
     table_client_db, session_client_db = create_table_session(
-        src_db_path=client_database_url, table_name=table_name
+        database_url=client_database_url, table_name=table_name
     )
 
     # Get database information by id
@@ -323,7 +323,10 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
                 "search_value": primary_value,
             },
         )
-        found_row = found_row[0]
+
+        print(f"Cheguei5 = {found_row}")
+
+        found_row = found_row
         print(f"\nfound_row -->> {found_row}\n")
 
         anonymized_row = found_row.copy()
@@ -361,6 +364,8 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
 
         rows_list.append(found_row)
 
+    print("Cheguei até aqui")
+
     encrypt_database_row(
         database_id=database_id,
         data={
@@ -368,7 +373,7 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
             "rows_to_encrypt": rows_list.copy(),
             "update_database": True,
         },
-        current_user=User,
+        current_user=current_user,
     )
 
     anonymized_rows = anonymization_database_rows(
@@ -381,13 +386,13 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
         current_user=current_user,
     )["rows_anonymized"]
 
-    print(f"\anonymized_rows -->> {anonymized_rows}\n")
+    print(f"\nanonymized_rows -->> {anonymized_rows}\n")
 
     generate_hash_rows(
         database_id=database_id,
         table_name=table_name,
         result_query=anonymized_rows,
-        current_user=User,
+        current_user=current_user,
     )
 
 
