@@ -18,40 +18,31 @@ from app.main.service.global_service import (
     get_primary_key,
 )
 
-"""from .database_service import (
-    create_table_session,
-    get_cloud_database_path,
-    get_database_path,
-    get_database_user_id,
-    get_primary_key,
-    get_sensitive_columns,
-)"""
-
 
 def generate_keys():
     # Generating keys
-    (public_key, private_key) = rsa.newkeys(2048)
+    (publicKey, privateKey) = rsa.newkeys(2048)
 
     # Save in PEM format
-    public_key_PEM = public_key.save_pkcs1("PEM")
-    private_key_PEM = private_key.save_pkcs1("PEM")
+    publicKeyPEM = publicKey.save_pkcs1("PEM")
+    privateKeyPEM = privateKey.save_pkcs1("PEM")
 
     # Transform from PEM to string base64
-    public_key_str = str(base64.b64encode(public_key_PEM))[2:-1]
-    private_key_str = str(base64.b64encode(private_key_PEM))[2:-1]
+    publicKeyStr = str(base64.b64encode(publicKeyPEM))[2:-1]
+    privateKeyStr = str(base64.b64encode(privateKeyPEM))[2:-1]
 
-    return public_key_str, private_key_str
+    return publicKeyStr, privateKeyStr
 
 
-def load_keys(public_key_str, private_key_str):
+def load_keys(publicKeyStr, privateKeyStr):
     # Transform from string base64 to Byte
-    public_key_byte = base64.b64decode(public_key_str.encode())
-    private_key_byte = base64.b64decode(private_key_str.encode())
+    publicKeyByte = base64.b64decode(publicKeyStr.encode())
+    privateKeyByte = base64.b64decode(privateKeyStr.encode())
 
-    public_key = rsa.PublicKey.load_pkcs1(public_key_byte)
-    private_key = rsa.PrivateKey.load_pkcs1(private_key_byte)
+    publicKey = rsa.PublicKey.load_pkcs1(publicKeyByte)
+    privateKey = rsa.PrivateKey.load_pkcs1(privateKeyByte)
 
-    return public_key, private_key
+    return publicKey, privateKey
 
 
 def encrypt(message, key):
@@ -146,8 +137,8 @@ def encrypt_database_row(
 
     # Load rsa keys
     public_key, _ = load_keys(
-        public_key_str=database_keys.public_key,
-        private_key_str=database_keys.private_key,
+        publicKeyStr=database_keys.public_key,
+        privateKeyStr=database_keys.private_key,
     )
 
     # Get columns to encrypt
@@ -236,8 +227,8 @@ def encrypt_database(
 
     # Load rsa keys
     public_key, _ = load_keys(
-        public_key_str=database_keys.public_key,
-        private_key_str=database_keys.private_key,
+        publicKeyStr=database_keys.public_key,
+        privateKeyStr=database_keys.private_key,
     )
 
     size_batch = 100

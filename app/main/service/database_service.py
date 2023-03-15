@@ -225,22 +225,15 @@ def get_database_columns(
     return {"column_names": columns_names}
 
 
-"""def get_database_columns_types(
+def get_database_columns_types(
     database_id: int, table_name: str
 ) -> tuple[None, int, str] | tuple[dict[str, str], int, str]:
 
-    # Get database path by id
-    if id_db:
-        src_db_path = get_database_path(id_db=id_db)
-        if not src_db_path:
-            return (None, 404, "database_not_found")
-
-    # Check user authorization
-    if get_database_user_id(id_db=id_db) != id_db_user:
-        return (None, 401, "user_unauthorized")
+    # Get database url
+    database_url = get_database_url(database_id=database_id)
 
     # Create connection to database
-    engine_db = create_engine(src_db_path)
+    engine_db = create_engine(database_url)
 
     # Get columns and their types
     columns = {}
@@ -251,7 +244,7 @@ def get_database_columns(
     for c in columns_table:
         columns[f"{c['name']}"] = str(c["type"])
 
-    return (columns, 200, None)"""
+    return columns
 
 
 def get_sensitive_columns(database_id: int, table_name: str) -> dict:

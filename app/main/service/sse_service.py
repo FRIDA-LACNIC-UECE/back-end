@@ -17,7 +17,7 @@ from app.main.service.global_service import (
 
 def update_hash_column(
     session_db,
-    table_name,
+    table_object,
     primary_key_data,
     raw_data,
 ):
@@ -29,8 +29,8 @@ def update_hash_column(
         hashed_line = hashlib.sha256(new_record.encode("utf-8")).hexdigest()
 
         stmt = (
-            update(table_name)
-            .where(table_name.c[0] == primary_key_value)
+            update(table_object)
+            .where(table_object.c[0] == primary_key_value)
             .values(line_hash=hashed_line)
         )
 
@@ -41,14 +41,14 @@ def update_hash_column(
 
 
 def generate_hash_rows(
-    user_id: int, database_id: int, table_name: str, result_query: list[dict]
+    database_id: int, table_name: str, result_query: list[dict], current_user: User
 ) -> None:
 
     # Get client database
     database = get_database(database_id=database_id)
 
     # Check user authorization
-    if database.user_id != user_id:
+    if database.user_id != current_user.id:
         raise DefaultException("unauthorized_user", code=401)
 
     # Get primary key name of client database
@@ -78,7 +78,7 @@ def generate_hash_rows(
 
     update_hash_column(
         session_db=session_cloud_database,
-        table_name=table_cloud_database,
+        table_object=table_cloud_database,
         primary_key_data=primary_key_data,
         raw_data=raw_data,
     )
@@ -151,7 +151,7 @@ def generate_hash_column(user_id: int, database_id: int, table_name: str) -> Non
 
         update_hash_column(
             session_db=session_cloud_database,
-            table_name=table_cloud_database,
+            table_object=table_cloud_database,
             primary_key_data=primary_key_data,
             raw_data=raw_data,
         )

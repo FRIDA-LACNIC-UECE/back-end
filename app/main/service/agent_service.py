@@ -4,35 +4,44 @@ import pandas as pd
 from sqlalchemy import func, select, update
 from werkzeug.datastructures import ImmutableMultiDict
 
-from app.main.exceptions import DefaultException
+from app.main.exceptions import DefaultException, ValidationException
 from app.main.model import DatabaseKey, User
+from app.main.service.anonymization_service import anonymization_database_rows
 from app.main.service.database_service import (
     get_database,
+    get_database_columns_types,
     get_database_url,
     get_sensitive_columns,
 )
-from app.main.service.encryption_service import decrypt_dict, load_keys
+from app.main.service.encryption_service import (
+    decrypt_dict,
+    encrypt_database_row,
+    load_keys,
+)
 from app.main.service.global_service import (
     create_table_session,
     get_cloud_database_url,
     get_index_column_table_object,
     get_primary_key,
 )
+from app.main.service.sse_service import generate_hash_rows
 
-"""def row_search(
+
+def decrypt_row(
     database_id: int,
-    table_name: str,
-    search_type: str,
-    search_value: any,
-    current_user: User,
+    data: dict[str, str],
+    current_user: User = None,
 ) -> dict:
 
-    # Get client database
-    cliente_database = get_database(database_id=database_id)
+    table_name = data.get("table_name")
+    search_type = data.get("search_type")
+    search_value = data.get("search_value")
 
-    # Check user authorization
-    if cliente_database.user != current_user.id:
-        raise DefaultException("unauthorized_user", code=401)
+    # Get client database
+    client_database = get_database(database_id=database_id)
+
+    # Get client database url
+    client_database_url = get_database_url(database_id=database_id)
 
     # Get cloud database url
     cloud_database_url = get_cloud_database_url(database_id=database_id)
@@ -48,6 +57,7 @@ from app.main.service.global_service import (
 
     # Searching to row on Cloud Database
     if search_type == "primary_key":
+        search_value = int(search_value)
         index_column_to_search = get_index_column_table_object(
             table_object=table_cloud_database,
             column_name=primary_key_name,
@@ -57,7 +67,7 @@ from app.main.service.global_service import (
             .filter(table_cloud_database.c[index_column_to_search] == search_value)
             .all()
         )
-    elif search_type == "hash":
+    elif search_type == "row_hash":
         index_column_to_search = get_index_column_table_object(
             table_object=table_cloud_database,
             column_name="line_hash",
@@ -68,8 +78,10 @@ from app.main.service.global_service import (
             .all()
         )
     else:
-        return (None, 400, "search_invalid_data")
-
+        raise ValidationException(
+            errors={"database": "search_invalid_data"},
+            message="Input payload validation failed",
+        )
     if not query_sensitive_data:
         raise DefaultException("row_not_found", code=404)
 
@@ -91,9 +103,9 @@ from app.main.service.global_service import (
     if not database_keys:
         raise DefaultException("database_keys_not_found", code=404)
 
-    _, private_key = load_keys(
-        public_key_str=database_keys.public_key,
-        private_key_str=database_keys.private_key,
+    public_key, private_key = load_keys(
+        publicKeyStr=database_keys.public_key,
+        privateKeyStr=database_keys.private_key,
     )
 
     # Decrypt sensitive data
@@ -104,7 +116,7 @@ from app.main.service.global_service import (
     # Create table object of Cloud Database and
     # session of Cloud Database to run sql operations
     table_client_db, session_client_db = create_table_session(
-        src_db_path=src_client_db_path, table_name=table_name
+        database_url=client_database_url, table_name=table_name
     )
 
     # Searching to row on Client Database
@@ -142,8 +154,8 @@ from app.main.service.global_service import (
 
     # Fix columns types of row
     columns_types = get_database_columns_types(
-        id_db_user=id_db_user, id_db=id_db, table_name=table_name
-    )[0]
+        database_id=database_id, table_name=table_name
+    )
 
     for key in columns_types.keys():
         column_type = columns_types[key].split("(")[0]
@@ -155,7 +167,7 @@ from app.main.service.global_service import (
         else:
             pass
 
-    return (dict_result_data, 200, "row_found")"""
+    return dict_result_data
 
 
 def show_rows_hash(
@@ -231,6 +243,8 @@ def include_hash_rows(
     table_name = data.get("table_name")
     hash_rows = data.get("hash_rows")
 
+    print(f"hash_rows = {hash_rows}")
+
     # Get client database
     database = get_database(database_id=database_id)
 
@@ -259,7 +273,7 @@ def include_hash_rows(
     for row in hash_rows:
         statement = (
             update(table_cloud_database)
-            .where(table_cloud_database.c[index_primary_key] == row[primary_key_name])
+            .where(table_cloud_database.c[index_primary_key] == row["primary_key"])
             .values(line_hash=row["line_hash"])
         )
 
@@ -268,63 +282,60 @@ def include_hash_rows(
     session_cloud_database.commit()
 
 
-"""def process_updates(
-    id_db_user: int, id_db: int, table_name: str, primary_key_list: list
-) -> tuple:
+def process_updates(database_id: int, data: dict[str, str], current_user: User) -> None:
 
-    # Check request body
-    if (
-        (id_db == None)
-        or (table_name == None)
-        or (primary_key_list == None)
-        or (len(primary_key_list) == 0)
-    ):
-        return (400, "invalid_updates_data5")
+    table_name = data.get("table_name")
+    primary_key_list = data.get("primary_key_list")
 
-    # Get client database path
-    src_client_db_path = get_database_path(id_db)
-    if not src_client_db_path:
-        return (404, "database_not_found")
+    # Get client database
+    client_database = get_database(database_id=database_id)
+
+    # Get client database url
+    client_database_url = get_database_url(database_id=database_id)
 
     # Check user authorization
-    if get_database_user_id(id_db=id_db) != id_db_user:
-        return (401, "user_unauthorized")
+    if client_database.user_id != current_user.id:
+        raise DefaultException("unauthorized_user", code=401)
 
     # Create table object of Client Database and
     # session of Client Database to run sql operations
     table_client_db, session_client_db = create_table_session(
-        src_db_path=src_client_db_path, table_name=table_name
+        src_db_path=client_database_url, table_name=table_name
     )
 
     # Get database information by id
-    src_cloud_db_path = get_cloud_database_path(id_db=id_db)
+    cloud_database_url = get_cloud_database_url(database_id=database_id)
 
-    # Get sensitive columns of Client Database
+    # Get sensitive columns of Client Datget_sensitive_columnsabase
     sensitive_columns = get_sensitive_columns(
-        id_db_user=id_db_user, id_db=id_db, table_name=table_name
-    )[0]
+        database_id=database_id, table_name=table_name
+    )["sensitive_column_names"]
 
     # Get original rows ​​that have been updated
     rows_list = []
 
     for primary_value in primary_key_list:
-        found_row = row_search(
-            id_db_user=id_db_user,
-            id_db=id_db,
-            table_name=table_name,
-            search_type="primary_key",
-            search_value=primary_value,
+        found_row = decrypt_row(
+            database_id=database_id,
+            data={
+                "table_name": table_name,
+                "search_type": "primary_key",
+                "search_value": primary_value,
+            },
         )
         found_row = found_row[0]
         print(f"\nfound_row -->> {found_row}\n")
 
         anonymized_row = found_row.copy()
-        anonymized_row, status_code, _ = anonymization_database_rows(
-            id_db=id_db,
-            table_name=table_name,
-            rows_to_anonymization=[anonymized_row],
-            insert_database=False,
-        )
+        anonymized_row = anonymization_database_rows(
+            database_id=database_id,
+            data={
+                "table_name": table_name,
+                "rows_to_anonymization": [anonymized_row],
+                "insert_database": False,
+            },
+            current_user=current_user,
+        )["rows_anonymized"]
         anonymized_row = anonymized_row[0]
 
         stmt = select(table_client_db).where(table_client_db.c[0] == primary_value)
@@ -350,31 +361,34 @@ def include_hash_rows(
 
         rows_list.append(found_row)
 
-    encrypt_database_rows(
-        id_db_user=id_db_user,
-        id_db=id_db,
-        rows_to_encrypt=rows_list.copy(),
-        table_name=table_name,
-        update_database=True,
+    encrypt_database_row(
+        database_id=database_id,
+        data={
+            "table_name": table_name,
+            "rows_to_encrypt": rows_list.copy(),
+            "update_database": True,
+        },
+        current_user=User,
     )
 
-    anonymized_rows, _, _ = anonymization_database_rows(
-        id_db=id_db,
-        table_name=table_name,
-        rows_to_anonymization=rows_list.copy(),
-        insert_database=True,
-    )
+    anonymized_rows = anonymization_database_rows(
+        database_id=database_id,
+        data={
+            "table_name": table_name,
+            "rows_to_anonymization": rows_list.copy(),
+            "insert_database": True,
+        },
+        current_user=current_user,
+    )["rows_anonymized"]
+
     print(f"\anonymized_rows -->> {anonymized_rows}\n")
 
     generate_hash_rows(
-        id_db_user=id_db_user,
-        id_db=id_db,
+        database_id=database_id,
         table_name=table_name,
         result_query=anonymized_rows,
+        current_user=User,
     )
-
-    if status_code == 200:
-        return (200, "updates_processed")"""
 
 
 def process_deletions(

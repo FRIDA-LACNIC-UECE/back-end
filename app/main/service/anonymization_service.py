@@ -17,7 +17,7 @@ from app.main.service.sse_service import generate_hash_column
 
 def anonymization_database_rows(
     database_id: int, data: dict[str, str], current_user: User
-) -> tuple:
+) -> dict:
 
     table_name = data.get("table_name")
     rows_to_anonymization = data.get("rows_to_anonymization")
