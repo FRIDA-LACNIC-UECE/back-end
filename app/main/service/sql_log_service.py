@@ -8,6 +8,7 @@ from app.main.config import Config
 from app.main.exceptions import DefaultException
 from app.main.model import Database, SqlLog, User
 from app.main.service.database_service import get_database
+from app.main.service.global_service import get_primary_key
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
 
@@ -93,3 +94,19 @@ def get_sql_log(sql_log_id: int, options: list = None) -> SqlLog:
         raise DefaultException("sql_log_not_found", code=404)
 
     return sql_log
+
+
+def updates_log(database_id: int, table_name: str, data: dict):
+    update_log = f"UPDATE {table_name} SET "
+
+    for index in range(len(data["columns"])):
+        update_log += f"{data['columns'][index]}={data['values'][index]} "
+
+    primary_key_name = get_primary_key(database_id=database_id, table_name=table_name)
+
+    update_log += f"WHERE {primary_key_name}={data['primary_key_value']}"
+
+    new_sql_log = SqlLog(database_id=database_id, sql_command=update_log)
+
+    db.session.add(new_sql_log)
+    db.session.commit()

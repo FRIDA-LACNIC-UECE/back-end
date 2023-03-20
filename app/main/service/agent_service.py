@@ -24,6 +24,7 @@ from app.main.service.global_service import (
     get_index_column_table_object,
     get_primary_key,
 )
+from app.main.service.sql_log_service import updates_log
 from app.main.service.sse_service import generate_hash_rows
 
 
@@ -314,13 +315,16 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
     # Get original rows ​​that have been updated
     rows_list = []
 
-    for primary_value in primary_key_list:
+    update_log = {}
+
+    for primary_key_value in primary_key_list:
+        update_log["primary_key_value"] = primary_key_value
         found_row = decrypt_row(
             database_id=database_id,
             data={
                 "table_name": table_name,
                 "search_type": "primary_key",
-                "search_value": primary_value,
+                "search_value": primary_key_value,
             },
         )
 
@@ -341,12 +345,14 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
         )["rows_anonymized"]
         anonymized_row = anonymized_row[0]
 
-        stmt = select(table_client_db).where(table_client_db.c[0] == primary_value)
+        stmt = select(table_client_db).where(table_client_db.c[0] == primary_key_value)
         client_row = session_client_db.execute(stmt)
         client_row = [row._asdict() for row in client_row][0]
         print(f"\nclient_row -->> {client_row}\n")
         print(f"\nanonymized_row -->> {anonymized_row}\n")
 
+        update_log["columns"] = []
+        update_log["values"] = []
         for sensitive_column in sensitive_columns:
 
             if type(client_row[sensitive_column]).__name__ == "date":
@@ -355,16 +361,23 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
                     sensitive_column
                 ].strftime("%Y-%m-%d"):
                     found_row[sensitive_column] = client_row[sensitive_column]
+                    update_log["columns"].append(sensitive_column)
+                    update_log["values"].append(
+                        client_row[sensitive_column].strftime("%Y-%m-%d")
+                    )
                     print(f"###TROCOU### -> {sensitive_column}")
+
             else:
                 print("entrei2")
                 if anonymized_row[sensitive_column] != client_row[sensitive_column]:
                     found_row[sensitive_column] = client_row[sensitive_column]
+                    update_log["columns"].append(sensitive_column)
+                    update_log["values"].append(client_row[sensitive_column])
                     print(f"###TROCOU### -> {sensitive_column}")
 
         rows_list.append(found_row)
 
-    print("Cheguei até aqui")
+        updates_log(database_id=database_id, table_name=table_name, data=update_log)
 
     encrypt_database_row(
         database_id=database_id,
