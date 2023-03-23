@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 flask create_db;
-python application.py;
+python3.10 application.py;

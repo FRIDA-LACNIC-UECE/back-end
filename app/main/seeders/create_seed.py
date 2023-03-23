@@ -11,11 +11,11 @@ from app.main.seeders import (
 )
 
 
-def create_seed():
+def create_seed(env_name: str):
     # To seed tables
     add_user()
     add_valid_database()
-    add_database()
+    add_database(env_name=env_name)
     add_database_keys()
     add_anonymization_types()
     add_anonymization_records()
@@ -24,13 +24,20 @@ def create_seed():
 
     # Create Test Database
     try:
-        create_test_frida_db(
-            USER="root",
-            DB_PW="larces132",
-            HOST="localhost",
-            DB_NAME="test_frida_db",
-            TABLE_NAME="clientes",
-        )
+        if env_name == "dev":
+            create_test_frida_db(
+                USER="root",
+                DB_PW="larces132",
+                HOST="localhost",
+                DB_NAME="test_frida_db",
+            )
+        else:
+            create_test_frida_db(
+                USER="root",
+                DB_PW="",
+                HOST="db",
+                DB_NAME="test_frida_db",
+            )
     except:
         print("==== Log Create DB Flask ====")
         print("Teste database not created")

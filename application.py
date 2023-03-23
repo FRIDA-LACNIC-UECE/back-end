@@ -37,8 +37,8 @@ def create_db():
     db.session.commit()
 
     if env_name in ["dev", "staging"]:
-        create_seed()
+        create_seed(env_name=env_name)
 
 
 if __name__ == "__main__":
-    app.run(host=app.config["HOST"])
+    app.run(host="0.0.0.0")

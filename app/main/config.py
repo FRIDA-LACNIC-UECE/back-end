@@ -1,7 +1,7 @@
 import os
 
-# uncomment the line below for postgres database url from environment variable
-# postgres_local_base = os.environ['DATABASE_URL']
+# uncomment the line below for mysql database url from environment variable
+# mysql_local_base = os.environ['DATABASE_URL']
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -25,25 +25,17 @@ class Config:
     HOST = "localhost"
     PORT = 3306
 
-    # Email
-    """MAIL_SERVER = "smtp.gmail.com"
-    MAIL_PORT = 465
-    MAIL_USERNAME = "smart.hospital@uece.br"
-    MAIL_PASSWORD = "uwhlwnievltsujkx"
-    MAIL_USE_TLS = False
-    MAIL_USE_SSL = True"""
-
     # Pagination
     CONTENT_PER_PAGE = [10, 20, 30, 50, 100]
     DEFAULT_CONTENT_PER_PAGE = CONTENT_PER_PAGE[0]
 
 
 class DevelopmentConfig(Config):
-    # uncomment the line below to use postgres
-    # SQLALCHEMY_DATABASE_URI = postgres_local_base
-    postgres_local_base = "mysql://root:larces132@localhost/frida"
+    # uncomment the line below to use mysql
+    # SQLALCHEMY_DATABASE_URI = mysql_local_base
+    mysql_local_base = "mysql://root:larces132@localhost/frida"
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = postgres_local_base
+    SQLALCHEMY_DATABASE_URI = mysql_local_base
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     ENV = "development"
     HOST = "localhost"
@@ -54,7 +46,7 @@ class DevelopmentConfig(Config):
 
 class StagingConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "mysql://root:larces132@localhost/frida"
+    SQLALCHEMY_DATABASE_URI = "mysql://root:@db/frida"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     ENV = "staging"
     HOST = "0.0.0.0"

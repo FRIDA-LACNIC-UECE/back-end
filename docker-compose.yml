@@ -1,31 +1,34 @@
 version: '3.8'
 
 services:
-  network_security-web:
-    build: .
+  db:
+    build: ./db
+    image: db-frida
+    container_name: db-container
     ports:
-    - 5000:5000
-    links:
-      - network_security_db
-    environment:
-      TZ: 'America/Sao_Paulo'
-
-  network_security_db:
-    image: postgres:14.6
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: frida
-      TZ: 'America/Sao_Paulo'
-      PGTZ: 'America/Sao_Paulo'
-    ports:
-      - '5433:5432'
+      - "3307:3306"
+    env_file:
+      - ./db/db.env
     volumes:
-      - frida:/var/lib/postgresql/data/
+      - frida-database:/var/lib/mysql
+    networks:
+      - frida-network
+    restart: always
+
+  api:
+    build: "./"
+    image: api-frida
+    container_name: api-container
+    ports:
+      - "5000:5000"
+    networks:
+      - frida-network
+    restart: always
+    depends_on:
+      - db
 
 volumes:
-  frida:
+  frida-database: {}
 
 networks:
-  default:
-    name: frida
+  frida-network:

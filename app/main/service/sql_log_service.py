@@ -97,14 +97,14 @@ def get_sql_log(sql_log_id: int, options: list = None) -> SqlLog:
 
 
 def updates_log(database_id: int, table_name: str, data: dict):
-    update_log = f"UPDATE {table_name} SET "
+    update_log = f"UPDATE {table_name} SET"
 
     for index in range(len(data["columns"])):
-        update_log += f"{data['columns'][index]}={data['values'][index]} "
+        update_log += f" {data['columns'][index]}='{data['values'][index]}'"
 
     primary_key_name = get_primary_key(database_id=database_id, table_name=table_name)
 
-    update_log += f"WHERE {primary_key_name}={data['primary_key_value']}"
+    update_log += f" WHERE {primary_key_name}={data['primary_key_value']}"
 
     new_sql_log = SqlLog(database_id=database_id, sql_command=update_log)
 

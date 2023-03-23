@@ -92,7 +92,7 @@ def insert_data(engine_db, table_name, num_of_rows, seed):
     session_db.commit()
 
 
-def create_test_frida_db(USER, DB_PW, HOST, DB_NAME, TABLE_NAME):
+def create_test_frida_db(USER, DB_PW, HOST, DB_NAME):
 
     if not database_exists(
         "mysql://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, DB_NAME)
