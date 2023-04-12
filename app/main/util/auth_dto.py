@@ -7,12 +7,15 @@ class AuthDTO:
     auth_login = api.model(
         "auth_login",
         {
-            "email": fields.String(required=True, description="user email"),
+            "email": fields.String(
+                required=True, description="user email", example="convidado@example.com"
+            ),
             "password": fields.String(
                 required=True,
                 description="user password",
                 min_length=8,
                 max_length=1024,
+                example="convidado123",
             ),
         },
     )

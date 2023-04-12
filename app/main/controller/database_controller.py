@@ -6,12 +6,12 @@ from app.main.model import User
 from app.main.service import (
     delete_database,
     get_database_by_id,
-    get_database_columns,
     get_database_tables,
     get_databases,
     get_route_sensitive_columns,
     jwt_admin_required,
     jwt_user_required,
+    route_get_database_columns,
     save_new_database,
     test_database_connection,
     update_database,
@@ -125,13 +125,17 @@ class DatabaseTables(Resource):
         return get_database_tables(database_id=database_id, current_user=current_user)
 
 
-@api.route("/column_names/<int:database_id>")
+@api.route("/columns/<int:database_id>")
 class DatabaseColumns(Resource):
     @api.doc()
     @api.doc(
         "Get database column names each table by id",
         params={
-            "table_name": {"description": "Database table name", "type": str},
+            "table_name": {
+                "description": "Database table name",
+                "type": str,
+                "required": True,
+            },
         },
         description="Get database column names each table by id.",
     )
@@ -141,11 +145,11 @@ class DatabaseColumns(Resource):
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(404, "database_not_found", _default_message_response)
     @jwt_user_required
-    def get(self, database_id: int, table_name: str, current_user: User):
+    def get(self, database_id: int, current_user: User):
         """Get database column names each table by id"""
         params = request.args
-        return get_database_columns(
-            database_id=database_id, table_name=table_name, current_user=current_user
+        return route_get_database_columns(
+            database_id=database_id, current_user=current_user, params=params
         )
 
 
@@ -155,7 +159,11 @@ class DatabaseSensitiveColumns(Resource):
     @api.doc(
         "List all registered databases of each user",
         params={
-            "table_name": {"description": "Database table name", "type": str},
+            "table_name": {
+                "description": "Database table name",
+                "type": str,
+                "required": True,
+            },
         },
         description=f"Get database sensitive columns names each table by id",
     )

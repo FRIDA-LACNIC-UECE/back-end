@@ -48,7 +48,6 @@ def get_database_by_id(database_id: int) -> Database:
 
 
 def save_new_database(data: dict[str, str]) -> None:
-
     new_database = Database(
         user_id=data.get("user_id"),
         valid_database_id=data.get("valid_database_id"),
@@ -104,7 +103,6 @@ def delete_database(database_id: int, current_user: User) -> None:
 
 
 def get_database(database_id: int, options: list = None) -> Database:
-
     query = Database.query
 
     if options is not None:
@@ -119,7 +117,6 @@ def get_database(database_id: int, options: list = None) -> Database:
 
 
 def get_database_url(database_id: int) -> str:
-
     database = get_database(
         database_id=database_id, options=[joinedload("valid_database")]
     )
@@ -137,7 +134,6 @@ def get_database_url(database_id: int) -> str:
 
 
 def get_database_tables(database_id: int, current_user: User) -> dict[list[str]]:
-
     database = get_database(database_id=database_id)
 
     database_url = get_database_url(database_id=database_id)
@@ -163,7 +159,6 @@ def get_database_columns(
     table_name: str = None,
     current_user: User = None,
 ) -> dict[list[str]]:
-
     if database_id:
         database_url = get_database_url(database_id=database_id)
 
@@ -197,7 +192,6 @@ def get_database_columns(
     table_name: str = None,
     current_user: User = None,
 ) -> dict[list[str]]:
-
     if database_id:
         database_url = get_database_url(database_id=database_id)
 
@@ -225,10 +219,45 @@ def get_database_columns(
     return {"column_names": columns_names}
 
 
+def route_get_database_columns(
+    database_id: int,
+    current_user: User,
+    params: ImmutableMultiDict,
+) -> dict[list[str]]:
+    table_name = params.get("table_name", type=str)
+
+    if database_id:
+        database_url = get_database_url(database_id=database_id)
+
+    if current_user and database_id:
+        database = get_database(database_id=database_id)
+        if database.user_id != current_user.id:
+            raise DefaultException("unauthorized_user", code=401)
+
+    try:
+        engine_database = create_engine(database_url)
+    except:
+        raise ValidationException(
+            errors={"database": "database_invalid_data"},
+            message="Input payload validation failed",
+        )
+
+    # Get database columns
+    columns_names = []
+    columns_types = []
+
+    columns_table = inspect(engine_database).get_columns(table_name)
+
+    for column in columns_table:
+        columns_names.append(str(column["name"]))
+        columns_types.append(str(column["type"]))
+
+    return {"columns_names": columns_names, "columns_types": columns_types}
+
+
 def get_database_columns_types(
     database_id: int, table_name: str
 ) -> tuple[None, int, str] | tuple[dict[str, str], int, str]:
-
     # Get database url
     database_url = get_database_url(database_id=database_id)
 
@@ -248,7 +277,6 @@ def get_database_columns_types(
 
 
 def get_sensitive_columns(database_id: int, table_name: str) -> dict:
-
     anonymization_records = AnonymizationRecord.query.filter(
         AnonymizationRecord.database_id == database_id,
         AnonymizationRecord.table == table_name,
@@ -271,9 +299,10 @@ def get_sensitive_columns(database_id: int, table_name: str) -> dict:
 
 
 def get_route_sensitive_columns(
-    params: ImmutableMultiDict, database_id: int, current_user: User
+    database_id: int,
+    current_user: User,
+    params: ImmutableMultiDict,
 ) -> dict:
-
     table_name = params.get("table_name", type=str)
 
     client_database = get_database(database_id=database_id)
@@ -304,7 +333,6 @@ def get_route_sensitive_columns(
 
 
 def test_database_connection(database_id: int, current_user: User) -> None:
-
     database = get_database(database_id=database_id)
 
     if database.user_id != current_user.id:

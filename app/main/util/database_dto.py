@@ -61,9 +61,13 @@ class DatabaseDTO:
     database_columns = api.model(
         "database_columns",
         {
-            "column_names": fields.List(
+            "columns_names": fields.List(
                 fields.String(description="column name"),
                 description="column name list",
+            ),
+            "columns_types": fields.List(
+                fields.String(description="column types"),
+                description="column types list",
             ),
         },
     )
