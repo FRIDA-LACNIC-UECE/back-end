@@ -9,7 +9,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "my_precious_secret_key")
     DEBUG = False
-    JWT_EXP = 8
+    JWT_EXP = 720
     ACTIVATION_EXP_SECONDS = 86400
 
     # Remove additional message on 404 responses
@@ -21,7 +21,7 @@ class Config:
     # Database Frida Informations
     TYPE_DATABASE = "mysql"
     USER_DATABASE = "root"
-    PASSWORD_DATABASE = "larces132"
+    PASSWORD_DATABASE = "trustno1"
     HOST = "localhost"
     PORT = 3306
 
@@ -33,7 +33,7 @@ class Config:
 class DevelopmentConfig(Config):
     # uncomment the line below to use mysql
     # SQLALCHEMY_DATABASE_URI = mysql_local_base
-    mysql_local_base = "mysql://root:larces132@localhost/frida"
+    mysql_local_base = "mysql://root:trustno1@localhost/frida"
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = mysql_local_base
     SQLALCHEMY_TRACK_MODIFICATIONS = False

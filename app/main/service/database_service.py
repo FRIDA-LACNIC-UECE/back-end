@@ -10,6 +10,7 @@ from app.main.config import Config
 from app.main.exceptions import DefaultException, ValidationException
 from app.main.model import AnonymizationRecord, Database, User
 from app.main.service.database_key_service import get_database_keys_by_database_id
+from app.main.service.valid_database_service import get_valid_database
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
 
@@ -339,6 +340,25 @@ def test_database_connection(database_id: int, current_user: User) -> None:
         raise DefaultException("unauthorized_user", code=401)
 
     database_url = get_database_url(database_id=database_id)
+
+    try:
+        engine = create_engine(database_url)
+
+        if not database_exists(engine.url):
+            raise DefaultException("database_not_connected", code=409)
+    except:
+        raise DefaultException("database_not_connected", code=409)
+
+
+def test_database_connection_by_url(data: dict[str, str]) -> None:
+    valid_database = get_valid_database(valid_database_id=data.get("valid_database_id"))
+    name = data.get("name")
+    username = data.get("username")
+    password = data.get("password")
+    host = data.get("host")
+    port = data.get("port")
+
+    database_url = f"{valid_database.name}://{username}:{password}@{host}:{port}/{name}"
 
     try:
         engine = create_engine(database_url)

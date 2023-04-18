@@ -27,7 +27,7 @@ def create_seed(env_name: str):
         if env_name == "dev":
             create_test_frida_db(
                 USER="root",
-                DB_PW="larces132",
+                DB_PW="trustno1",
                 HOST="localhost",
                 DB_NAME="test_frida_db",
             )

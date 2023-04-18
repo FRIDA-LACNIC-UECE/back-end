@@ -14,6 +14,7 @@ from app.main.service import (
     route_get_database_columns,
     save_new_database,
     test_database_connection,
+    test_database_connection_by_url,
     update_database,
 )
 from app.main.util import DatabaseDTO, DefaultResponsesDTO
@@ -21,8 +22,10 @@ from app.main.util import DatabaseDTO, DefaultResponsesDTO
 database_ns = DatabaseDTO.api
 api = database_ns
 
+
 _database_put = DatabaseDTO.database_put
 _database_post = DatabaseDTO.database_post
+_database_test_connection_by_url = DatabaseDTO.database_post
 _database_response = DatabaseDTO.database_response
 _database_list = DatabaseDTO.database_list
 _database_tables = DatabaseDTO.database_tables
@@ -189,8 +192,25 @@ class TestDatabaseConnection(Resource):
     @api.response(200, "database_connected", _default_message_response)
     @api.response(400, "Input payload validation failed", _default_message_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @api.response(409, "database_not_connected", _default_message_response)
     @jwt_user_required
     def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
-        """ "Test database connection"""
+        """Test database connection"""
         test_database_connection(database_id=database_id, current_user=current_user)
+        return {"message": "database_connected"}, 200
+
+
+@api.route("/test_database_connection_by_url")
+class TestDatabaseConnectionByUrl(Resource):
+    @api.doc("Test database connection by url")
+    @api.expect(_database_test_connection_by_url, validate=True)
+    @api.response(200, "database_connected", _default_message_response)
+    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @api.response(409, "database_not_connected", _default_message_response)
+    @jwt_user_required
+    def post(self, current_user) -> tuple[dict[str, str], int]:
+        """Test database connection by url"""
+        data = request.json
+        test_database_connection_by_url(data=data)
         return {"message": "database_connected"}, 200
