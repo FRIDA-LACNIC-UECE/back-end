@@ -1,6 +1,6 @@
 import math
 
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import and_, create_engine, inspect
 from sqlalchemy.orm import joinedload
 from sqlalchemy_utils import database_exists
 from werkzeug.datastructures import ImmutableMultiDict
@@ -48,15 +48,25 @@ def get_database_by_id(database_id: int) -> Database:
     return database
 
 
-def save_new_database(data: dict[str, str]) -> None:
+def save_new_database(data: dict[str, str], current_user: User) -> None:
+    name = data.get("name")
+    username = data.get("username")
+    host = data.get("host")
+    port = data.get("port")
+    valid_database = get_valid_database(valid_database_id=data.get("valid_database_id"))
+
+    _validate_database_unique_constraint(
+        name=name, username=username, host=host, port=port
+    )
+
     new_database = Database(
-        user_id=data.get("user_id"),
-        valid_database_id=data.get("valid_database_id"),
-        name=data.get("name"),
-        host=data.get("host"),
-        username=data.get("username"),
-        port=data.get("port"),
+        name=name,
+        host=host,
+        username=username,
+        port=port,
         password=data.get("password"),
+        valid_database=valid_database,
+        user=current_user,
     )
 
     db.session.add(new_database)
@@ -66,13 +76,32 @@ def save_new_database(data: dict[str, str]) -> None:
 def update_database(database_id: int, current_user: User, data: dict[str, str]) -> None:
     database = get_database(database_id=database_id)
 
+    new_name = data.get("name")
+    new_username = data.get("username")
+    new_host = data.get("host")
+    new_port = data.get("port")
+    new_valid_database_id = data.get("valid_database_id")
+
     if (not current_user.is_admin) and (database.user_id != current_user.id):
         raise DefaultException("unauthorized_user", code=401)
 
-    database.name = data.get("name")
-    database.host = data.get("host")
-    database.username = data.get("username")
-    database.port = data.get("port")
+    _validate_database_unique_constraint(
+        name=new_name,
+        username=new_username,
+        host=new_host,
+        port=new_port,
+        filters=[Database.id != database_id],
+    )
+
+    if database.valid_database_id != new_valid_database_id:
+        database.valid_database = get_valid_database(
+            valid_database_id=new_valid_database_id
+        )
+
+    database.name = new_name
+    database.host = new_host
+    database.username = new_username
+    database.port = new_port
     database.password = data.get("password")
 
     db.session.commit()
@@ -115,6 +144,21 @@ def get_database(database_id: int, options: list = None) -> Database:
         raise DefaultException("database_not_found", code=404)
 
     return database
+
+
+def _validate_database_unique_constraint(
+    name: str, username: str, host: str, port: int, filters: list = []
+) -> None:
+    if Database.query.filter(
+        and_(
+            Database.name == name,
+            Database.username == username,
+            Database.host == host,
+            Database.port == port,
+        ),
+        *filters,
+    ).first():
+        raise DefaultException("database_already_exist", code=409)
 
 
 def get_database_url(database_id: int) -> str:

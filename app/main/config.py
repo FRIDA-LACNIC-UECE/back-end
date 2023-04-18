@@ -21,7 +21,7 @@ class Config:
     # Database Frida Informations
     TYPE_DATABASE = "mysql"
     USER_DATABASE = "root"
-    PASSWORD_DATABASE = "trustno1"
+    PASSWORD_DATABASE = "larces132"
     HOST = "localhost"
     PORT = 3306
 
@@ -33,7 +33,7 @@ class Config:
 class DevelopmentConfig(Config):
     # uncomment the line below to use mysql
     # SQLALCHEMY_DATABASE_URI = mysql_local_base
-    mysql_local_base = "mysql://root:trustno1@localhost/frida"
+    mysql_local_base = "mysql://root:larces132@localhost/frida"
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = mysql_local_base
     SQLALCHEMY_TRACK_MODIFICATIONS = False

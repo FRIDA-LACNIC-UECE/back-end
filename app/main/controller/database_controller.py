@@ -72,8 +72,7 @@ class Database(Resource):
     def post(self, current_user) -> tuple[dict[str, str], int]:
         """Create a new database"""
         data = request.json
-        data["user_id"] = current_user.id
-        save_new_database(data=data)
+        save_new_database(data=data, current_user=current_user)
         return {"message": "database_created"}, 201
 
 

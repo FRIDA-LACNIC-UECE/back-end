@@ -20,16 +20,7 @@ class DatabaseDTO:
         },
     )
 
-    database_put = api.model(
-        "database_put",
-        {
-            "name": fields.String(required=True, description="database name"),
-            "host": fields.String(required=True, description="database host"),
-            "username": fields.String(required=True, description="database username"),
-            "port": fields.Integer(required=True, description="database port"),
-            "password": fields.String(required=True, description="database password"),
-        },
-    )
+    database_put = api.clone("database_put", database_post)
 
     database_response = api.model(
         "database_response",
@@ -61,13 +52,9 @@ class DatabaseDTO:
     database_columns = api.model(
         "database_columns",
         {
-            "columns_names": fields.List(
+            "column_names": fields.List(
                 fields.String(description="column name"),
                 description="column name list",
-            ),
-            "columns_types": fields.List(
-                fields.String(description="column types"),
-                description="column types list",
             ),
         },
     )

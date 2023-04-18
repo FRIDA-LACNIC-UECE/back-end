@@ -3,6 +3,15 @@ from app.main import db
 
 class Database(db.Model):
     __tablename__ = "database"
+    _table_args_ = (
+        db.UniqueConstraint(
+            "name",
+            "username",
+            "host",
+            "port",
+            name="unique_database_name_username_host_port",
+        ),
+    )
 
     id = db.Column(db.Integer, nullable=False, autoincrement=True, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
