@@ -1,6 +1,5 @@
-from flask import jsonify, request
-
 from controller import app
+from flask import jsonify, request
 from service import rsa_service
 from service.authenticate import jwt_required
 

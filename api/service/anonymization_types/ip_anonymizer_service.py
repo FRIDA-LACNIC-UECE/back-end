@@ -4,13 +4,12 @@ from array import array
 from functools import reduce
 
 from Crypto.Cipher import AES
-from sqlalchemy import select
-
 from service.database_service import (
     create_table_session,
     get_index_column_table_object,
     get_primary_key,
 )
+from sqlalchemy import select
 
 if sys.version_info < (3, 3):
     import netaddr
@@ -176,7 +175,6 @@ def anonymization_data(
     """
 
     for number_row in range(len(rows_to_anonymize)):
-
         # Anonymize ip
         for column in columns_to_anonymize:
             rows_to_anonymize[number_row][column] = anonymization_ip(

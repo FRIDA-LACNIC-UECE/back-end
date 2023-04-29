@@ -1,4 +1,4 @@
-# Frida-Lanic-UECE-2022
+# Frida-Lacnic-UECE-2022
 
 This application is being developed by a team of researchers and developers from the State University of Ceará.
 

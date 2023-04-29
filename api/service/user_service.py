@@ -1,7 +1,6 @@
 import datetime
 
 import jwt
-
 from controller import app, db
 from model.user_model import User, user_share_schema, users_share_schema
 

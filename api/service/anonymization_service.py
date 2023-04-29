@@ -1,6 +1,3 @@
-from sqlalchemy import create_engine
-from sqlalchemy_utils import database_exists
-
 from controller import db
 from model.anonymization_model import Anonymization, anonymizations_share_schema
 from model.anonymization_type_model import AnonymizationType
@@ -14,6 +11,103 @@ from service.anonymization_types import (
 )
 from service.database_service import get_cloud_database_path, get_database_path
 from service.sse_service import generate_hash_column
+from sqlalchemy import create_engine
+from sqlalchemy_utils import database_exists
+
+
+def get_anonymizations() -> tuple[list[dict], int]:
+    """
+    This function returns the registered anonymizations.
+
+    Parameters:
+    ----------
+        No parameters
+
+    Returns:
+    -------
+    tuple[list[dict], int]
+        (registered anonymizations, status code).
+    """
+
+    registered_anonymizations = anonymizations_share_schema.dump(
+        Anonymization.query.all()
+    )
+
+    return (registered_anonymizations, 200)
+
+
+def add_anonymization(
+    id_db: int,
+    id_anonymization_type: int,
+    table_name: str,
+    columns_to_anonymize: list[str],
+) -> tuple[int, str]:
+    """
+    This function registers a anonymization.
+
+    Parameters:
+    ----------
+    id_db : int
+        Database ID.
+
+    id_anonymization_type : int
+        Database anonymization type ID.
+
+    table_name : str
+        Table name to anonymize.
+
+    columns_to_anonymize : list[str]
+        Columns names to anonymize.
+
+    Returns:
+    -------
+    tuple[int, str]
+        (status code, response message).
+    """
+
+    # Add anonymization
+    anonymization = Anonymization(
+        id_database=id_db,
+        id_anonymization_type=id_anonymization_type,
+        table=table_name,
+        columns=columns_to_anonymize,
+    )
+
+    db.session.add(anonymization)
+    db.session.commit()
+
+    return (200, "anonymization_added")
+
+
+def delete_anonymization(id_anonymization: int) -> tuple[int, str]:
+    """
+    This function deletes a anonymization.
+
+    Parameters:
+    ----------
+    id_anonymization : int
+        Anonymization ID.
+
+    Returns:
+    -------
+    tuple[int, str]
+        (status code, response message).
+    """
+
+    anonymization = Anonymization.query.filter_by(id=id_anonymization).first()
+
+    if not anonymization:
+        return (404, "anonymization_not_found")
+
+    db.session.delete(anonymization)
+    db.session.commit()
+
+    anonymization = Anonymization.query.filter_by(id=id_anonymization).first()
+
+    if not anonymization:
+        return (200, "anonymization_deleted")
+
+    return (400, "anonymization_not_deleted")
 
 
 def get_anonymizations() -> tuple[list[dict], int]:
@@ -165,7 +259,6 @@ def anonymization_database_rows(
 
     # Run anonymization for each anonymization types
     for anonymization in lists_columns_anonymizations:
-
         # Get anonymization type name by id
         anonymization_type_name = (
             AnonymizationType.query.filter_by(id=anonymization["id_anonymization_type"])
@@ -280,7 +373,6 @@ def anonymization_table(src_client_db_path: str, id_db: int, table_name: str) ->
 
     # Run anonymization for each anonymization types
     for anonymization in lists_columns_anonymizations:
-
         # Get anonymization type name by id
         anonymization_type_name = (
             AnonymizationType.query.filter_by(id=anonymization["id_anonymization_type"])

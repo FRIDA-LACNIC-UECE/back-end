@@ -1,6 +1,5 @@
-from flask import jsonify, request
-
 from controller import app
+from flask import jsonify, request
 from service.authenticate import jwt_required
 from service.database_service import (
     add_database,

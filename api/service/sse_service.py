@@ -1,9 +1,6 @@
 import hashlib
 
 import pandas as pd
-from sqlalchemy import MetaData, Table, create_engine, func, inspect, select, update
-from sqlalchemy.orm import Session, sessionmaker
-
 from service.database_service import (
     create_table_session,
     get_cloud_database_path,
@@ -13,6 +10,8 @@ from service.database_service import (
     get_primary_key,
     get_sensitive_columns,
 )
+from sqlalchemy import MetaData, Table, create_engine, func, inspect, select, update
+from sqlalchemy.orm import Session, sessionmaker
 
 
 def update_hash_column(
@@ -21,8 +20,7 @@ def update_hash_column(
     primary_key_data,
     raw_data,
 ):
-
-    for (primary_key_value, row) in zip(primary_key_data, range(raw_data.shape[0])):
+    for primary_key_value, row in zip(primary_key_data, range(raw_data.shape[0])):
         record = raw_data.iloc[row].values
         record = list(record)
         new_record = str(record)
@@ -43,7 +41,6 @@ def update_hash_column(
 def generate_hash_rows(
     id_db_user: int, id_db: int, table_name: str, result_query: list[dict]
 ) -> tuple[int, str]:
-
     # Get client database path
     src_client_db_path = get_database_path(id_db)
     if not src_client_db_path:
@@ -87,7 +84,6 @@ def generate_hash_rows(
 def generate_hash_column(
     id_db_user: int, id_db: int, table_name: str
 ) -> tuple[int, str]:
-
     # Get client database path
     src_client_db_path = get_database_path(id_db)
     if not src_client_db_path:
@@ -157,7 +153,6 @@ def generate_hash_column(
 
 
 def include_hash_rows(id_db_user, id_db, table_name, hash_rows):
-
     # Get Cloud Database Path
     src_cloud_db_path = get_cloud_database_path(id_db=id_db)
     if not src_cloud_db_path:

@@ -1,6 +1,5 @@
-from flask import jsonify, request
-
 from controller import app
+from flask import jsonify, request
 from service.anonymization_service import (
     add_anonymization,
     anonymization_database,

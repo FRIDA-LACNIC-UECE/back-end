@@ -2,9 +2,6 @@ import base64
 
 import pandas as pd
 import rsa
-from sqlalchemy import create_engine, insert, select, update
-from sqlalchemy_utils import create_database, database_exists
-
 from model.database_key_model import DatabaseKey, database_key_share_schema
 from service.database_service import (
     create_table_session,
@@ -14,6 +11,8 @@ from service.database_service import (
     get_primary_key,
     get_sensitive_columns,
 )
+from sqlalchemy import create_engine, insert, select, update
+from sqlalchemy_utils import create_database, database_exists
 
 
 def generateKeys():
@@ -55,7 +54,6 @@ def encrypt(message, key):
 
 
 def decrypt(encrypted_message, key):
-
     # Convert from string (base64) to bytes
     ciphertext = base64.b64decode(encrypted_message.encode())
 
@@ -63,7 +61,6 @@ def decrypt(encrypted_message, key):
 
 
 def encrypt_list(data_list, key):
-
     encrypted_list = []
 
     for data in data_list:
@@ -74,7 +71,6 @@ def encrypt_list(data_list, key):
 
 
 def decrypt_list(data_list, key):
-
     decrypted_list = []
 
     for data in data_list:
@@ -85,7 +81,6 @@ def decrypt_list(data_list, key):
 
 
 def encrypt_dict(data_dict, key):
-
     for keys in data_dict.keys():
         data_dict[keys] = encrypt(str(data_dict[keys]), key)
 
@@ -93,7 +88,6 @@ def encrypt_dict(data_dict, key):
 
 
 def decrypt_dict(data_dict, key):
-
     for keys in data_dict.keys():
         data_dict[keys] = decrypt(data_dict[keys], key)
 
@@ -192,7 +186,6 @@ def encrypt_database_rows(
         session_cloud_db.commit()
     else:
         for row in rows_to_encrypt:
-
             primary_key_value = row[primary_key_name]
             row.pop(primary_key_name, None)
 
@@ -280,7 +273,6 @@ def encrypt_database(
 
     # Encrypt database
     while results:
-
         from_db = [row._asdict() for row in results]
 
         # Create dataframe with data original database
