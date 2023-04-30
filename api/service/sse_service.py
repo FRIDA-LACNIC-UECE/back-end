@@ -1,7 +1,9 @@
 import hashlib
 
 import pandas as pd
-from service.database_service import (
+from sqlalchemy import func, select, update
+
+from .database_service import (
     create_table_session,
     get_cloud_database_path,
     get_database_path,
@@ -10,8 +12,6 @@ from service.database_service import (
     get_primary_key,
     get_sensitive_columns,
 )
-from sqlalchemy import MetaData, Table, create_engine, func, inspect, select, update
-from sqlalchemy.orm import Session, sessionmaker
 
 
 def update_hash_column(
@@ -68,6 +68,9 @@ def generate_hash_rows(
         src_db_path=src_cloud_db_path, table_name=table_name
     )
 
+    for index in len(result_query):
+        result_query[index] = list(result_query[index])
+
     # Transform query rows to dataframe
     raw_data = pd.DataFrame(result_query, columns=client_columns_list)
     primary_key_data = raw_data[primary_key_name]
@@ -101,7 +104,6 @@ def generate_hash_column(
         id_db_user=id_db_user, id_db=id_db, table_name=table_name
     )[0]
     client_columns_list = [primary_key_name] + sensitive_columns
-    print(client_columns_list)
 
     # Create table object of Client Database and
     # session of Client Database to run sql operations
@@ -135,6 +137,8 @@ def generate_hash_column(
 
         for result in results:
             from_db.append(list(result))
+
+        print(from_db)
 
         session_client_db.close()
 
@@ -250,8 +254,8 @@ def show_rows_hash(
 
     # Run paginate
     query = session_cloud_db.query(table_cloud_db).filter(
-        table_cloud_db.c[0] >= primary_key_value_min_limit + (page * per_page),
-        table_cloud_db.c[0] <= primary_key_value_min_limit + ((page + 1) * per_page),
+        table_cloud_db.c[0] >= (page * per_page),
+        table_cloud_db.c[0] <= ((page + 1) * per_page),
     )
 
     query_results = {}

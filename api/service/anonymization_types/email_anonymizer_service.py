@@ -1,5 +1,11 @@
 from faker import Faker
+<<<<<<< HEAD
 from service.database_service import (
+=======
+from sqlalchemy import select
+
+from ..database_service import (
+>>>>>>> 81d106f (organize directories)
     create_table_session,
     get_index_column_table_object,
     get_primary_key,

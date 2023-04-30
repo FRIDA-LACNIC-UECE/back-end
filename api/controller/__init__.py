@@ -1,21 +1,9 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_marshmallow import Marshmallow
-from flask_cors import CORS
-
-from config import (
-    TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, 
-    HOST, PORT, NAME_DATABASE
-)
-
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "{}://{}:{}@{}:{}/{}".format(
-    TYPE_DATABASE, USER_DATABASE, PASSWORD_DATABASE, 
-    HOST, PORT, NAME_DATABASE
-)
-app.config['SECRET_KEY'] = 'secret'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-
-db = SQLAlchemy(app)
-ma = Marshmallow(app)
-CORS(app)
+from .anonymization_controller import *
+from .anonymization_type_controller import *
+from .cloud_controller import *
+from .database_controller import *
+from .index import *
+from .rsa_controller import *
+from .sse_controller import *
+from .user_controller import *
+from .valid_database_controller import *

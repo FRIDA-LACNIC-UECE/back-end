@@ -7,7 +7,8 @@ from service.anonymization_service import (
     delete_anonymization,
     get_anonymizations,
 )
-from service.authenticate import jwt_required
+
+from ..service.authenticate import jwt_required
 
 
 @app.route("/getAnonymization", methods=["GET"])

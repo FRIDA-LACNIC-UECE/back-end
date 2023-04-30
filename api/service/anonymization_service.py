@@ -1,7 +1,12 @@
-from controller import db
-from model.anonymization_model import Anonymization, anonymizations_share_schema
-from model.anonymization_type_model import AnonymizationType
-from service.anonymization_types import (
+from sqlalchemy import create_engine
+from sqlalchemy_utils import database_exists
+
+from api import db
+from api.model import Anonymization, AnonymizationType, anonymizations_share_schema
+from api.service.database_service import get_cloud_database_path, get_database_path
+from api.service.sse_service import generate_hash_column
+
+from .anonymization_types import (
     cpf_anonymizer_service,
     date_anonymizer_service,
     email_anonymizer_service,
@@ -9,10 +14,6 @@ from service.anonymization_types import (
     named_entities_anonymizer_service,
     rg_anonymizer_service,
 )
-from service.database_service import get_cloud_database_path, get_database_path
-from service.sse_service import generate_hash_column
-from sqlalchemy import create_engine
-from sqlalchemy_utils import database_exists
 
 
 def get_anonymizations() -> tuple[list[dict], int]:
@@ -278,8 +279,7 @@ def anonymization_database_rows(
                 rows_to_anonymize=rows_to_anonymization,
                 insert_database=insert_database,
             )
-            print("\n named_entities_anonymizer anonimizando\n")
-            # print(rows_to_anonymization)
+            # print("\n named_entities_anonymizer anonimizando\n")
 
         elif anonymization_type_name == "date_anonymizer":
             date_anonymizer_service.anonymization_database_rows(
@@ -289,8 +289,7 @@ def anonymization_database_rows(
                 rows_to_anonymize=rows_to_anonymization,
                 insert_database=insert_database,
             )
-            print("\n date_anonymizer anonimizando\n")
-            # print(rows_to_anonymization)
+            # print("\n date_anonymizer anonimizando\n")
 
         elif anonymization_type_name == "email_anonymizer":
             email_anonymizer_service.anonymization_database_rows(
@@ -300,8 +299,7 @@ def anonymization_database_rows(
                 rows_to_anonymize=rows_to_anonymization,
                 insert_database=insert_database,
             )
-            print("\n email_anonymizer anonimizando\n")
-            # print(rows_to_anonymization)
+            # print("\n email_anonymizer anonimizando\n")
 
         elif anonymization_type_name == "ip_anonymizer":
             ip_anonymizer_service.anonymization_database_rows(
@@ -311,8 +309,7 @@ def anonymization_database_rows(
                 rows_to_anonymize=rows_to_anonymization,
                 insert_database=insert_database,
             )
-            print("\n ip_anonymizer anonimizando\n")
-            # print(rows_to_anonymization)
+            # print("\n ip_anonymizer anonimizando\n")
 
         elif anonymization_type_name == "rg_anonymizer":
             rg_anonymizer_service.anonymization_database_rows(
@@ -322,8 +319,7 @@ def anonymization_database_rows(
                 rows_to_anonymize=rows_to_anonymization,
                 insert_database=insert_database,
             )
-            print("\n rg_anonymizer anonimizando\n")
-            # print(rows_to_anonymization)
+            # print("\n rg_anonymizer anonimizando\n")
 
         elif anonymization_type_name == "cpf_anonymizer":
             cpf_anonymizer_service.anonymization_database_rows(
@@ -333,8 +329,7 @@ def anonymization_database_rows(
                 rows_to_anonymize=rows_to_anonymization,
                 insert_database=insert_database,
             )
-            print("\n cpf_anonymizer anonimizando\n")
-            # print(rows_to_anonymization)
+            # print("\n cpf_anonymizer anonimizando\n")
 
         else:
             pass
@@ -390,7 +385,7 @@ def anonymization_table(src_client_db_path: str, id_db: int, table_name: str) ->
                 table_name=anonymization["table"],
                 columns_to_anonymize=anonymization["columns"],
             )
-            print("\n\n name_entities_anonymizer anonimizando\n\n")
+            # print("\n\n name_entities_anonymizer anonimizando\n\n")
 
         elif anonymization_type_name == "date_anonymizer":
             date_anonymizer_service.anonymization_database(
@@ -398,7 +393,7 @@ def anonymization_table(src_client_db_path: str, id_db: int, table_name: str) ->
                 table_name=anonymization["table"],
                 columns_to_anonymize=anonymization["columns"],
             )
-            print("\n\n date_anonymizer anonimizando\n\n")
+            # print("\n\n date_anonymizer anonimizando\n\n")
 
         elif anonymization_type_name == "email_anonymizer":
             email_anonymizer_service.anonymization_database(
@@ -406,7 +401,7 @@ def anonymization_table(src_client_db_path: str, id_db: int, table_name: str) ->
                 table_name=anonymization["table"],
                 columns_to_anonymize=anonymization["columns"],
             )
-            print("\n\n email_anonymizer anonimizando\n\n")
+            # print("\n\n email_anonymizer anonimizando\n\n")
 
         elif anonymization_type_name == "ip_anonymizer":
             ip_anonymizer_service.anonymization_database(
@@ -414,7 +409,7 @@ def anonymization_table(src_client_db_path: str, id_db: int, table_name: str) ->
                 table_name=anonymization["table"],
                 columns_to_anonymize=anonymization["columns"],
             )
-            print("\n\n ip_anonymizer anonimizando\n\n")
+            # print("\n\n ip_anonymizer anonimizando\n\n")
 
         elif anonymization_type_name == "rg_anonymizer":
             rg_anonymizer_service.anonymization_database(
@@ -422,7 +417,7 @@ def anonymization_table(src_client_db_path: str, id_db: int, table_name: str) ->
                 table_name=anonymization["table"],
                 columns_to_anonymize=anonymization["columns"],
             )
-            print("\n\n rg_anonymizer anonimizando\n\n")
+            # print("\n\n rg_anonymizer anonimizando\n\n")
 
         elif anonymization_type_name == "cpf_anonymizer":
             cpf_anonymizer_service.anonymization_database(
@@ -430,7 +425,7 @@ def anonymization_table(src_client_db_path: str, id_db: int, table_name: str) ->
                 table_name=anonymization["table"],
                 columns_to_anonymize=anonymization["columns"],
             )
-            print("\n\n cpf_anonymizer anonimizando\n\n")
+            # print("\n\n cpf_anonymizer anonimizando\n\n")
 
         else:
             return 400

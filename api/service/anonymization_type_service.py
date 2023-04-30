@@ -1,9 +1,6 @@
-from controller import db
-from model.anonymization_type_model import (
-    AnonymizationType,
-    anonymization_types_share_schema,
-)
-from model.user_model import User
+from api import db
+
+from ..model import AnonymizationType, User, anonymization_types_share_schema
 
 
 def get_anonymizations_type() -> tuple[list[dict], int]:

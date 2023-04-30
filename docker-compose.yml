@@ -1,20 +1,32 @@
 services:
   db:
-    image: mysql
-    command: --default-authentication-plugin=mysql_native_password
+    build: ./db
+    image: db-frida
     container_name: db-container
-    environment:
-        MYSQL_ROOT_PASSWORD: larces
+    ports:
+      - "3307:3306"
+    env_file:
+      - ./db/db.env
     volumes:
-        - ./db/entrypoint:/docker-entrypoint-initdb.d
+      - db_data:/var/lib/mysql
+    networks:
+      - backend-frida
     restart: always
 
-  agent:
-    build: "./api"
-    image: agent
-    container_name: agent-container
+  api:
+    build: "./"
+    image: api-frida
+    container_name: api-container
     ports:
-        - "5000:5000"
+      - "5000:5000"
+    networks:
+      - backend-frida
     restart: always
     depends_on:
-        - db
+      - db
+
+volumes:
+  db_data: {}
+
+networks:
+  backend-frida:

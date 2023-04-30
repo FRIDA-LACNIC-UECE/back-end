@@ -1,7 +1,7 @@
-# Informations cloud database
+# Informations of Frida API database
 TYPE_DATABASE = "mysql"
-NAME_DATABASE = "public"
+NAME_DATABASE = "frida"
 USER_DATABASE = "root"
-PASSWORD_DATABASE = "Dd16012018"
-HOST = "localhost"
+PASSWORD_DATABASE = ""
+HOST = "db"
 PORT = "3306"
