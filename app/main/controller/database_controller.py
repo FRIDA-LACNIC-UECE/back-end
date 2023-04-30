@@ -29,7 +29,7 @@ _database_test_connection_by_url = DatabaseDTO.database_post
 _database_response = DatabaseDTO.database_response
 _database_list = DatabaseDTO.database_list
 _database_tables = DatabaseDTO.database_tables
-_database_columns = DatabaseDTO.database_columns
+_database_table_columns = DatabaseDTO.database_table_columns
 _database_sensitive_columns = DatabaseDTO.database_sensitive_columns
 
 _default_message_response = DefaultResponsesDTO.message_response
@@ -127,7 +127,7 @@ class DatabaseTables(Resource):
         return get_database_tables(database_id=database_id, current_user=current_user)
 
 
-@api.route("/columns/<int:database_id>")
+@api.route("/table_columns/<int:database_id>")
 class DatabaseColumns(Resource):
     @api.doc()
     @api.doc(
@@ -142,7 +142,7 @@ class DatabaseColumns(Resource):
         description="Get database column names each table by id.",
     )
     @api.marshal_with(
-        _database_columns, code=200, description="get_database_column_names"
+        _database_table_columns, code=200, description="get_database_column_names"
     )
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(404, "database_not_found", _default_message_response)

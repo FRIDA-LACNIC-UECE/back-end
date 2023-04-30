@@ -288,16 +288,13 @@ def route_get_database_columns(
         )
 
     # Get database columns
-    columns_names = []
-    columns_types = []
+    columns_inspector = inspect(engine_database).get_columns(table_name)
 
-    columns_table = inspect(engine_database).get_columns(table_name)
+    table_columns = []
+    for column in columns_inspector:
+        table_columns.append({"name": str(column["name"]), "type": str(column["type"])})
 
-    for column in columns_table:
-        columns_names.append(str(column["name"]))
-        columns_types.append(str(column["type"]))
-
-    return {"columns_names": columns_names, "columns_types": columns_types}
+    return {"table_columns": table_columns}
 
 
 def get_database_columns_types(

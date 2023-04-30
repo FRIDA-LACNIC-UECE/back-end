@@ -18,26 +18,32 @@ def create_seed(env_name: str):
     add_database(env_name=env_name)
     add_database_keys()
     add_anonymization_types()
-    add_anonymization_records()
     add_sql_logs()
-    db.session.commit()
+    db.session.flush()
 
-    # Create Test Database
-    try:
-        if env_name == "dev":
+    if env_name == "dev":
+        add_anonymization_records()
+
+        try:
             create_test_frida_db(
                 USER="root",
                 DB_PW="larces132",
                 HOST="localhost",
                 DB_NAME="test_frida_db",
             )
-        else:
+        except:
+            print("==== Log Create DB Flask ====")
+            print("Teste database not created")
+    else:
+        try:
             create_test_frida_db(
                 USER="root",
                 DB_PW="",
                 HOST="db",
                 DB_NAME="test_frida_db",
             )
-    except:
-        print("==== Log Create DB Flask ====")
-        print("Teste database not created")
+        except:
+            print("==== Log Create DB Flask ====")
+            print("Teste database not created")
+
+    db.session.commit()

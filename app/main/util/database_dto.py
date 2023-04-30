@@ -49,14 +49,17 @@ class DatabaseDTO:
         },
     )
 
-    database_columns = api.model(
-        "database_columns",
+    database_table_column = api.model(
+        "database_table_column",
         {
-            "column_names": fields.List(
-                fields.String(description="column name"),
-                description="column name list",
-            ),
+            "name": fields.String(description="column name"),
+            "type": fields.String(description="column type"),
         },
+    )
+
+    database_table_columns = api.model(
+        "database_table_columns",
+        {"table_columns": fields.Nested(database_table_column)},
     )
 
     database_sensitive_columns = api.model(
