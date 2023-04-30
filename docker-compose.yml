@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     build: ./db
@@ -8,9 +10,9 @@ services:
     env_file:
       - ./db/db.env
     volumes:
-      - db_data:/var/lib/mysql
+      - frida-database:/var/lib/mysql
     networks:
-      - backend-frida
+      - frida-network
     restart: always
 
   api:
@@ -20,13 +22,13 @@ services:
     ports:
       - "5000:5000"
     networks:
-      - backend-frida
+      - frida-network
     restart: always
     depends_on:
       - db
 
 volumes:
-  db_data: {}
+  frida-database: {}
 
 networks:
-  backend-frida:
+  frida-network:
