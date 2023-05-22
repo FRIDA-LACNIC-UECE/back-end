@@ -1,4 +1,5 @@
 import math
+from time import time
 
 from sqlalchemy import or_
 from werkzeug.datastructures import ImmutableMultiDict
@@ -8,8 +9,11 @@ from app.main import db
 from app.main.config import Config
 from app.main.exceptions import DefaultException
 from app.main.model import Database, User
+from app.main.service import token_generate
+from app.main.service.email_service import send_email_activation
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
+_EXP_ACTIVATION = Config.ACTIVATION_EXP_SECONDS
 
 
 def get_users(params: ImmutableMultiDict) -> dict:
@@ -85,10 +89,20 @@ def save_new_user(data: dict[str, str]) -> None:
         email=email,
         password=generate_password_hash(password),
         is_admin=0,
+        activation_token=token_generate(email),
+        activation_token_exp=int(time()) + _EXP_ACTIVATION,
+        reset_password_token=None,
+        reset_password_token_exp=None,
     )
 
     db.session.add(new_user)
     db.session.commit()
+
+    send_email_activation(
+        to=new_user.email,
+        username=new_user.username,
+        token=new_user.activation_token,
+    )
 
 
 def delete_user(user_id: int) -> None:
@@ -102,7 +116,6 @@ def delete_user(user_id: int) -> None:
 
 
 def get_user(user_id: int, options: list = None) -> User:
-
     query = User.query
 
     if options is not None:

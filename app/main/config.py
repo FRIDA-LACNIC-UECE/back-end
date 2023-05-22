@@ -1,13 +1,10 @@
 import os
 
-# uncomment the line below for mysql database url from environment variable
-# mysql_local_base = os.environ['DATABASE_URL']
-
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "my_precious_secret_key")
+    SECRET_KEY = os.getenv("SECRET_KEY")
     DEBUG = False
     JWT_EXP = 720
     ACTIVATION_EXP_SECONDS = 86400
@@ -18,12 +15,13 @@ class Config:
     # Swagger
     RESTX_MASK_SWAGGER = False
 
-    # Database Frida Informations
-    TYPE_DATABASE = "mysql"
-    USER_DATABASE = "root"
-    PASSWORD_DATABASE = ""
-    HOST_DATABASE = "db"
-    PORT_DATABASE = 3306
+    # Email
+    MAIL_SERVER = "smtp.gmail.com"
+    MAIL_PORT = 465
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+    MAIL_USE_TLS = False
+    MAIL_USE_SSL = True
 
     # Pagination
     CONTENT_PER_PAGE = [10, 20, 30, 50, 100]
@@ -31,9 +29,7 @@ class Config:
 
 
 class DevelopmentConfig(Config):
-    # uncomment the line below to use mysql
-    # SQLALCHEMY_DATABASE_URI = mysql_local_base
-    mysql_local_base = "mysql://root:larces132@localhost/frida"
+    mysql_local_base = os.getenv("DATABASE_URL")
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = mysql_local_base
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -63,10 +59,12 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
+    mysql_local_base = os.getenv("DATABASE_URL")
     DEBUG = False
-    # uncomment the line below to use postgres
-    # SQLALCHEMY_DATABASE_URI = postgres_local_base
+    SQLALCHEMY_DATABASE_URI = mysql_local_base
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     ENV = "production"
+    HOST = "localhost"
 
 
 config_by_name = dict(
