@@ -1,62 +1,85 @@
 from flask_restx import Namespace, fields
 
+from app.main.util.anonymization_type_dto import AnonymizationTypeDTO
+from app.main.util.database_dto import DatabaseDTO
+
 
 class AnonymizationRecordDTO:
     api = Namespace(
         "anonymization_record", description="Anonymization record related operations"
     )
 
+    anonymization_record_id = {
+        "id": fields.Integer(description="anonymization record id"),
+    }
+
+    anonymization_record_database_id = {
+        "database_id": fields.Integer(
+            required=True, description="database relationship", example=1
+        ),
+    }
+
+    anonymization_record_database = {
+        "database": fields.Nested(
+            DatabaseDTO.database_response,
+            description="database info",
+        ),
+    }
+
+    anonymization_record_anonymization_type_id = {
+        "anonymization_type_id": fields.Integer(
+            required=True, description="anonymization type relationship", example=1
+        ),
+    }
+
+    anonymization_record_anonymization_type = {
+        "anonymization_type": fields.Nested(
+            api.model(
+                "anonymization_record_anonymization_type",
+                AnonymizationTypeDTO.anonymization_type_id
+                | AnonymizationTypeDTO.anonymization_type_name,
+            ),
+            description="anonymization type info",
+        ),
+    }
+
+    anonymization_record_table_name = {
+        "table": fields.String(
+            required=True,
+            description="anonymization record table name",
+            min_length=1,
+            max_length=255,
+        ),
+    }
+
+    anonymization_record_columns = {
+        "columns": fields.List(
+            fields.String(description="anonymization record column"),
+            required=True,
+            description="anonymization record column list",
+            min_item=1,
+        )
+    }
+
     anonymization_record_post = api.model(
         "anonymization_record_post",
-        {
-            "database_id": fields.Integer(
-                required=True, description="database relationship"
-            ),
-            "anonymization_type_id": fields.Integer(
-                required=True, description="anonymization type relationship"
-            ),
-            "table_name": fields.String(
-                required=True, description="anonymization record table name"
-            ),
-            "columns": fields.List(
-                fields.String(description="anonymization record column"),
-                required=True,
-                description="anonymization record column list",
-            ),
-        },
+        anonymization_record_database_id
+        | anonymization_record_anonymization_type_id
+        | anonymization_record_table_name
+        | anonymization_record_columns,
     )
 
-    anonymization_record_update = api.model(
-        "anonymization_record_put",
-        {
-            "anonymization_type_id": fields.Integer(
-                required=True, description="anonymization type relationship"
-            ),
-            "table_name": fields.String(
-                required=True, description="anonymization record table name"
-            ),
-            "columns": fields.List(
-                fields.String(description="anonymization record column"),
-                required=True,
-                description="anonymization record column list",
-            ),
-        },
+    anonymization_record_update = api.clone(
+        "anonymization_record_put", anonymization_record_post
     )
 
     anonymization_record_response = api.model(
         "anonymization_record_response",
-        {
-            "id": fields.Integer(description="anonymization record id"),
-            "database_id": fields.Integer(description="database relationship"),
-            "anonymization_type_id": fields.Integer(
-                description="anonymization type relationship"
-            ),
-            "table": fields.String(description="anonymization record table name"),
-            "columns": fields.List(
-                fields.String(description="anonymization record column"),
-                description="anonymization record column list",
-            ),
-        },
+        anonymization_record_id
+        | anonymization_record_table_name
+        | anonymization_record_columns
+        | anonymization_record_anonymization_type
+        | anonymization_record_database,
     )
 
     anonymization_record_list = api.model(

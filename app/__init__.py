@@ -1,5 +1,3 @@
-# docker compose up  --build --force-recreate --no-deps
-
 from flask_restx import Api
 
 from app.main.exceptions import DefaultException, ValidationException

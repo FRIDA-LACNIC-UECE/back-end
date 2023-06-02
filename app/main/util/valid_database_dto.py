@@ -4,21 +4,25 @@ from flask_restx import Namespace, fields
 class ValidDatabaseDTO:
     api = Namespace("valid_database", description="Valid database related operations")
 
-    valid_database_post = api.model(
-        "valid_database_post",
-        {
-            "name": fields.String(required=True, description="valid database name"),
-        },
-    )
+    valid_database_id = {
+        "id": fields.Integer(required=True, description="valid database id")
+    }
+
+    valid_database_name = {
+        "name": fields.String(
+            required=True,
+            description="valid database name",
+            min_length=1,
+            max_length=255,
+        ),
+    }
+
+    valid_database_post = api.model("valid_database_post", valid_database_name)
 
     valid_database_put = api.clone("valid_database_put", valid_database_post)
 
     valid_database_response = api.model(
-        "valid_database_response",
-        {
-            "id": fields.Integer(description="valid database id"),
-            "name": fields.String(description="valid database name"),
-        },
+        "valid_database_response", valid_database_id | valid_database_name
     )
 
     valid_database_list = api.model(

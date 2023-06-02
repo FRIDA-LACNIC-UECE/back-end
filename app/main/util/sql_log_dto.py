@@ -1,25 +1,38 @@
 from flask_restx import Namespace, fields
 
+from app.main.util import DatabaseDTO
+
 
 class SqlLogDTO:
     api = Namespace("sql_log", description="SQL Log related operations")
 
-    sql_log_post = api.model(
-        "sql_log_post",
-        {
-            "database_id": fields.Integer(description="relatioship database"),
-            "sql_command": fields.String(required=True, description="sql log command"),
-        },
-    )
+    sql_log_id = {"id": fields.Integer(description="sql log id")}
+
+    sql_log_database_id = {
+        "database_id": fields.Integer(
+            required=True, description="sql log id", example=1
+        )
+    }
+
+    sql_log_sql_command = {
+        "sql_command": fields.String(
+            required=True, description="sql log command", min_length=1
+        )
+    }
+
+    sql_log_post = api.model("sql_log_post", sql_log_database_id, sql_log_sql_command)
 
     sql_log_put = api.clone("sql_log_put", sql_log_post)
 
     sql_log_response = api.model(
         "sql_log_response",
-        {
-            "id": fields.Integer(description="sql log id"),
-            "database_id": fields.Integer(description="relationship database"),
-            "sql_command": fields.String(description="sql log command"),
+        sql_log_id
+        | sql_log_sql_command
+        | {
+            "database": fields.Nested(
+                DatabaseDTO.database_response,
+                description="database info",
+            ),
         },
     )
 

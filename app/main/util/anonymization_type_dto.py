@@ -6,11 +6,19 @@ class AnonymizationTypeDTO:
         "anonymization_type", description="Anonymization type related operations"
     )
 
+    anonymization_type_id = {"id": fields.Integer(description="anonymization type id")}
+
+    anonymization_type_name = {
+        "name": fields.String(
+            required=True,
+            description="anonymization type name",
+            min_length=1,
+            max_length=255,
+        )
+    }
+
     anonymization_type_post = api.model(
-        "anonymization_type_post",
-        {
-            "name": fields.String(required=True, description="anonymization type name"),
-        },
+        "anonymization_type_post", anonymization_type_name
     )
 
     anonymization_type_put = api.clone(
@@ -18,11 +26,7 @@ class AnonymizationTypeDTO:
     )
 
     anonymization_type_response = api.model(
-        "anonymization_type_response",
-        {
-            "id": fields.Integer(description="anonymization type id"),
-            "name": fields.String(description="anonymization type name"),
-        },
+        "anonymization_type_response", anonymization_type_id | anonymization_type_name
     )
 
     anonymization_type_list = api.model(

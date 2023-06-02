@@ -6,9 +6,8 @@ from app.main.service import (
     delete_sql_log,
     get_sql_log_by_id,
     get_sql_logs,
-    jwt_admin_required,
-    jwt_user_required,
     save_new_sql_log,
+    token_required,
     update_sql_log,
 )
 from app.main.util import DefaultResponsesDTO
@@ -47,7 +46,7 @@ class SqlLog(Resource):
         description=f"List all registered sql logs with pagination. {_DEFAULT_CONTENT_PER_PAGE} sql logs per page.",
     )
     @api.marshal_with(_sql_log_list, code=200, description="_sql_log_list")
-    @jwt_user_required
+    @token_required()
     def get(self, current_user):
         """List all registered sql logs"""
         params = request.args
@@ -57,7 +56,7 @@ class SqlLog(Resource):
     @api.expect(_sql_log_post, validate=True)
     @api.response(201, "sql_log_created", _default_message_response)
     @api.response(400, "Input payload validation failed", _validation_error_response)
-    @jwt_user_required
+    @token_required()
     def post(self, current_user) -> tuple[dict[str, str], int]:
         """Create a new sql log"""
         data = request.json
@@ -70,7 +69,7 @@ class SqlLogById(Resource):
     @api.doc("Get sql log by id")
     @api.marshal_with(_sql_log_response, code=200, description="sql_log_info")
     @api.response(404, "sql_log_not_found", _default_message_response)
-    @jwt_admin_required
+    @token_required(admin_privileges_required=True, return_user=False)
     def get(self, sql_log_id: int):
         """Get sql log by id"""
         return get_sql_log_by_id(sql_log_id=sql_log_id)
@@ -80,7 +79,7 @@ class SqlLogById(Resource):
     @api.response(200, "sql_log_updated", _default_message_response)
     @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(404, "sql_log_not_found", _default_message_response)
-    @jwt_admin_required
+    @token_required(admin_privileges_required=True, return_user=False)
     def put(self, sql_log_id):
         """Update a sql log"""
         data = request.json
@@ -90,7 +89,7 @@ class SqlLogById(Resource):
     @api.doc("Delete a sql log")
     @api.response(200, "sql_log_deleted", _default_message_response)
     @api.response(404, "sql_log_not_found", _default_message_response)
-    @jwt_admin_required
+    @token_required(admin_privileges_required=True, return_user=False)
     def delete(self, sql_log_id: int) -> tuple[dict[str, str], int]:
         """Delete a sql log"""
         delete_sql_log(sql_log_id=sql_log_id)

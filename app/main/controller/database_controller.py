@@ -6,22 +6,20 @@ from app.main.model import User
 from app.main.service import (
     delete_database,
     get_database_by_id,
-    get_database_tables,
+    get_database_columns,
+    get_database_tables_names,
     get_databases,
     get_route_sensitive_columns,
-    jwt_admin_required,
-    jwt_user_required,
-    route_get_database_columns,
     save_new_database,
     test_database_connection,
     test_database_connection_by_url,
+    token_required,
     update_database,
 )
 from app.main.util import DatabaseDTO, DefaultResponsesDTO
 
 database_ns = DatabaseDTO.api
 api = database_ns
-
 
 _database_put = DatabaseDTO.database_put
 _database_post = DatabaseDTO.database_post
@@ -57,8 +55,8 @@ class Database(Resource):
     )
     @api.marshal_with(_database_list, code=200, description="databases_list")
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @jwt_user_required
-    def get(self, current_user: User):
+    @token_required()
+    def get(self, current_user: User) -> tuple[dict[str, any], int]:
         """List all registered databases of each user"""
         params = request.args
         return get_databases(params=params, current_user=current_user)
@@ -66,10 +64,12 @@ class Database(Resource):
     @api.doc("Create a new database")
     @api.expect(_database_post, validate=True)
     @api.response(201, "database_created", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @jwt_user_required
-    def post(self, current_user) -> tuple[dict[str, str], int]:
+    @api.response(409, "database_already_exists", _default_message_response)
+    @api.response(500, "database_not_created", _default_message_response)
+    @token_required()
+    def post(self, current_user: User) -> tuple[dict[str, str], int]:
         """Create a new database"""
         data = request.json
         save_new_database(data=data, current_user=current_user)
@@ -80,23 +80,33 @@ class Database(Resource):
 class DatabaseById(Resource):
     @api.doc("Get database by id")
     @api.marshal_with(_database_response, code=200, description="database_info")
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "database_not_found", _default_message_response)
-    @jwt_admin_required
-    def get(self, database_id: int):
+    @token_required()
+    def get(self, database_id: int, current_user: User) -> tuple[dict[str, any], int]:
         """Get database by id"""
-        return get_database_by_id(database_id=database_id)
+        return get_database_by_id(database_id=database_id, current_user=current_user)
 
     @api.doc("Update a database")
     @api.expect(_database_put, validate=True)
     @api.response(200, "database_updated", _default_message_response)
     @api.response(400, "Input payload validation failed", _validation_error_response)
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
     @api.response(403, "required_administrator_privileges", _default_message_response)
-    @api.response(404, "database_not_found", _default_message_response)
-    @jwt_user_required
-    def put(self, database_id, current_user):
+    @api.response(
+        404, "valid_database_not_found\ndatabase_not_found", _default_message_response
+    )
+    @token_required()
+    def put(self, database_id, current_user) -> tuple[dict[str, str], int]:
         """Update a database"""
         data = request.json
         update_database(database_id=database_id, current_user=current_user, data=data)
@@ -106,8 +116,11 @@ class DatabaseById(Resource):
     @api.response(200, "database_deleted", _default_message_response)
     @api.response(401, "token_not_found\ntoken_invalid\nunauthorized_user")
     @api.response(404, "database_not_found", _default_message_response)
-    @jwt_user_required
-    def delete(self, database_id: int, current_user: User):
+    @api.response(404, "database_not_found", _default_message_response)
+    @token_required()
+    def delete(
+        self, database_id: int, current_user: User
+    ) -> tuple[dict[str, str], int]:
         """Delete a database"""
         delete_database(database_id=database_id, current_user=current_user)
         return {"message": "database_deleted"}, 200
@@ -115,21 +128,28 @@ class DatabaseById(Resource):
 
 @api.route("/table_names/<int:database_id>")
 class DatabaseTables(Resource):
-    @api.doc("Get database table names by id")
+    @api.doc("Get database table names by database id")
     @api.marshal_with(
         _database_tables, code=200, description="get_database_table_names"
     )
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
     @api.response(404, "database_not_found", _default_message_response)
-    @jwt_user_required
+    @api.response(409, "database_not_conected", _default_message_response)
+    @api.response(500, "internal_error_getting_tables_names", _default_message_response)
+    @token_required()
     def get(self, database_id: int, current_user: User):
         """Get database table names by id"""
-        return get_database_tables(database_id=database_id, current_user=current_user)
+        return get_database_tables_names(
+            database_id=database_id, current_user=current_user
+        )
 
 
 @api.route("/table_columns/<int:database_id>")
 class DatabaseColumns(Resource):
-    @api.doc()
     @api.doc(
         "Get database column names each table by id",
         params={
@@ -144,13 +164,21 @@ class DatabaseColumns(Resource):
     @api.marshal_with(
         _database_table_columns, code=200, description="get_database_column_names"
     )
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @api.response(404, "database_not_found", _default_message_response)
-    @jwt_user_required
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
+    @api.response(404, "database_not_found\ntable_not_found", _default_message_response)
+    @api.response(409, "database_not_conected", _default_message_response)
+    @api.response(
+        500, "internal_error_getting_table_columns", _default_message_response
+    )
+    @token_required()
     def get(self, database_id: int, current_user: User):
         """Get database column names each table by id"""
         params = request.args
-        return route_get_database_columns(
+        return get_database_columns(
             database_id=database_id, current_user=current_user, params=params
         )
 
@@ -169,14 +197,22 @@ class DatabaseSensitiveColumns(Resource):
         },
         description=f"Get database sensitive columns names each table by id",
     )
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @api.response(404, "database_not_found", _default_message_response)
     @api.marshal_with(
         _database_sensitive_columns,
         code=200,
         description="get_database_sensitive_columns_names",
     )
-    @jwt_user_required
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
+    @api.response(404, "database_not_found", _default_message_response)
+    @api.response(409, "database_not_conected", _default_message_response)
+    @api.response(
+        500, "internal_error_getting_sensitive_column_names", _default_message_response
+    )
+    @token_required()
     def get(self, database_id: int, current_user: User):
         """Get database sensitive columns names each table by id"""
         params = request.args
@@ -189,10 +225,14 @@ class DatabaseSensitiveColumns(Resource):
 class TestDatabaseConnection(Resource):
     @api.doc("Test database connection")
     @api.response(200, "database_connected", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
     @api.response(409, "database_not_connected", _default_message_response)
-    @jwt_user_required
+    @token_required()
     def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
         """Test database connection"""
         test_database_connection(database_id=database_id, current_user=current_user)
@@ -204,11 +244,11 @@ class TestDatabaseConnectionByUrl(Resource):
     @api.doc("Test database connection by url")
     @api.expect(_database_test_connection_by_url, validate=True)
     @api.response(200, "database_connected", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(409, "database_not_connected", _default_message_response)
-    @jwt_user_required
-    def post(self, current_user) -> tuple[dict[str, str], int]:
+    @token_required(return_user=False)
+    def post(self) -> tuple[dict[str, str], int]:
         """Test database connection by url"""
         data = request.json
         test_database_connection_by_url(data=data)

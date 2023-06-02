@@ -8,7 +8,6 @@ from app.main.config import Config
 from app.main.exceptions import DefaultException
 from app.main.model import Column, Table, User
 from app.main.service.database_service import get_database
-from app.main.service.global_service import get_primary_key
 from app.main.service.table_service import get_table
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE

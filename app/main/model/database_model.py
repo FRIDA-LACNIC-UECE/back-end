@@ -1,10 +1,13 @@
+from sqlalchemy import func
+
 from app.main import db
 
 
 class Database(db.Model):
     __tablename__ = "database"
-    _table_args_ = (
+    __table_args__ = (
         db.UniqueConstraint(
+            "valid_database_id",
             "name",
             "username",
             "host",
@@ -18,23 +21,35 @@ class Database(db.Model):
     valid_database_id = db.Column(
         db.Integer, db.ForeignKey("valid_database.id"), nullable=False
     )
+
     name = db.Column(db.String(100), nullable=False)
     host = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(100), nullable=False)
     port = db.Column(db.Integer, nullable=False)
     password = db.Column(db.String(100), nullable=False)
     ssh = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(db.DateTime, onupdate=func.now())
 
-    user = db.relationship("User", back_populates="database", lazy=True)
-    valid_database = db.relationship(
-        "ValidDatabase", back_populates="database", lazy=True
+    user = db.relationship("User", back_populates="databases")
+    valid_database = db.relationship("ValidDatabase", back_populates="databases")
+    anonymization_records = db.relationship(
+        "AnonymizationRecord", back_populates="database"
     )
-    anonymization_record = db.relationship(
-        "AnonymizationRecord", back_populates="database", lazy=True
-    )
-    database_key = db.relationship("DatabaseKey", back_populates="database", lazy=True)
-    sql_log = db.relationship("SqlLog", back_populates="database", lazy=True)
-    tables = db.relationship("Table", back_populates="database", lazy=True)
+    tables = db.relationship("Table", back_populates="database")
+    database_key = db.relationship("DatabaseKey", back_populates="database")
+    sql_logs = db.relationship("SqlLog", back_populates="database")
+
+    @property
+    def url(self) -> str:
+        return "{}://{}:{}@{}:{}/{}".format(
+            self.valid_database.name,
+            self.username,
+            self.password,
+            self.host,
+            self.port,
+            self.name,
+        )
 
     def __repr__(self):
-        return f"<Database : {self.name}>"
+        return f"<Database: {self.id}>"

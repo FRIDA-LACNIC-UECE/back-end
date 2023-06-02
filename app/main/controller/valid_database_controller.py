@@ -6,15 +6,15 @@ from app.main.service import (
     delete_valid_database,
     get_valid_database_by_id,
     get_valid_databases,
-    jwt_admin_required,
-    jwt_user_required,
     save_new_valid_database,
+    token_required,
     update_valid_database,
 )
 from app.main.util import DefaultResponsesDTO, ValidDatabaseDTO
 
 valid_database_ns = ValidDatabaseDTO.api
 api = valid_database_ns
+
 _valid_database_post = ValidDatabaseDTO.valid_database_post
 _valid_databaset_put = ValidDatabaseDTO.valid_database_put
 _valid_database_response = ValidDatabaseDTO.valid_database_response
@@ -30,7 +30,7 @@ _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
 @api.route("")
 class ValidDatabase(Resource):
     @api.doc(
-        "List of registered valid databases",
+        "List all registered valid databases",
         params={
             "page": {"description": "Page number", "default": 1, "type": int},
             "per_page": {
@@ -39,17 +39,17 @@ class ValidDatabase(Resource):
                 "enum": _CONTENT_PER_PAGE,
                 "type": int,
             },
-            "name": {"description": "Database name", "type": str},
+            "name": {"description": "Valid database name", "type": str},
         },
-        description=f"List of registered valid databases with pagination. {_DEFAULT_CONTENT_PER_PAGE} valid databases per page.",
+        description=f"List all registered valid databases with pagination. {_DEFAULT_CONTENT_PER_PAGE} valid databases per page.",
     )
     @api.marshal_with(
         _valid_database_list, code=200, description="valid_databases_list"
     )
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @jwt_user_required
-    def get(self, current_user):
-        """List of registered valid databases"""
+    @token_required(return_user=False)
+    def get(self) -> tuple[dict, int]:
+        """List all registered valid databases"""
         params = request.args
         return get_valid_databases(params=params)
 
@@ -59,8 +59,8 @@ class ValidDatabase(Resource):
     @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(403, "required_administrator_privileges", _default_message_response)
-    @api.response(409, "valid_database_exists", _default_message_response)
-    @jwt_admin_required
+    @api.response(409, "valid_database_already_exists", _default_message_response)
+    @token_required(admin_privileges_required=True, return_user=False)
     def post(self) -> tuple[dict[str, str], int]:
         """Create a new valid database"""
         data = request.json
@@ -70,16 +70,16 @@ class ValidDatabase(Resource):
 
 @api.route("/<int:valid_database_id>")
 class ValidDatabaseById(Resource):
-    @api.doc("Get valid database by id")
+    @api.doc("Get a valid database by id")
     @api.marshal_with(
         _valid_database_response, code=200, description="valid_database_info"
     )
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "valid_database_not_found", _default_message_response)
-    @jwt_admin_required
-    def get(self, valid_database_id: int):
-        """Get valid database by id"""
+    @token_required(return_user=False)
+    def get(self, valid_database_id: int) -> tuple[dict, int]:
+        """Get a valid database by id"""
         return get_valid_database_by_id(valid_database_id=valid_database_id)
 
     @api.doc("Update a valid database")
@@ -90,8 +90,8 @@ class ValidDatabaseById(Resource):
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "valid_database_not_found", _default_message_response)
     @api.response(409, "valid_database_already_exists", _default_message_response)
-    @jwt_admin_required
-    def put(self, valid_database_id):
+    @token_required(admin_privileges_required=True, return_user=False)
+    def put(self, valid_database_id) -> tuple[dict[str, str], int]:
         """Update a valid database"""
         data = request.json
         update_valid_database(valid_database_id=valid_database_id, data=data)
@@ -102,7 +102,10 @@ class ValidDatabaseById(Resource):
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "valid_database_not_found", _default_message_response)
-    @jwt_admin_required
+    @api.response(
+        409, "valid_database_associated_with_database", _default_message_response
+    )
+    @token_required(admin_privileges_required=True, return_user=False)
     def delete(self, valid_database_id: int) -> tuple[dict[str, str], int]:
         """Delete a valid database"""
         delete_valid_database(valid_database_id=valid_database_id)
