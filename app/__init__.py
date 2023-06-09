@@ -15,7 +15,7 @@ from .main.controller import (
     valid_database_ns,
 )
 from .main.exceptions import DefaultException, ValidationException
-from .main.util import DefaultResponsesDTO
+from .main.util import DefaultResponsesDTO, TableDTO
 
 authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
@@ -39,6 +39,7 @@ api.add_namespace(sql_log_ns, path="/sql_log")
 api.add_namespace(agent_ns, path="/agent")
 
 api.add_namespace(DefaultResponsesDTO.api)
+api.add_namespace(TableDTO.api)
 
 # Exception Handler
 api.errorhandler(DefaultException)

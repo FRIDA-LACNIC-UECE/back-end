@@ -6,5 +6,6 @@ from .auth_controller import *
 from .database_controller import *
 from .encryption_controller import *
 from .sql_log_controller import *
+from .table_controller import *
 from .user_controller import *
 from .valid_database_controller import *

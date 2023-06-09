@@ -5,6 +5,7 @@ from app.main.seeders import (
     add_database,
     add_database_keys,
     add_sql_logs,
+    add_tables,
     add_user,
     add_valid_database,
     create_test_frida_db,
@@ -19,6 +20,7 @@ def create_seed(env_name: str):
     add_database_keys()
     add_anonymization_types()
     add_sql_logs()
+    add_tables()
     db.session.flush()
 
     if env_name == "dev":

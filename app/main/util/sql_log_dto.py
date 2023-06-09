@@ -18,7 +18,7 @@ class SqlLogDTO:
         "sql_log_response",
         {
             "id": fields.Integer(description="sql log id"),
-            "database_id": fields.Integer(description="relatioship database"),
+            "database_id": fields.Integer(description="relationship database"),
             "sql_command": fields.String(description="sql log command"),
         },
     )

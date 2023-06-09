@@ -34,6 +34,7 @@ class Database(db.Model):
     )
     database_key = db.relationship("DatabaseKey", back_populates="database", lazy=True)
     sql_log = db.relationship("SqlLog", back_populates="database", lazy=True)
+    tables = db.relationship("Table", back_populates="database", lazy=True)
 
     def __repr__(self):
         return f"<Database : {self.name}>"

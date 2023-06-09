@@ -9,8 +9,10 @@ from app.main import db
 from app.main.config import Config
 from app.main.exceptions import DefaultException, ValidationException
 from app.main.model import AnonymizationRecord, Database, DatabaseKey, User
-from app.main.service.database_key_service import get_database_keys_by_database_id
-from app.main.service.database_key_service import generate_keys
+from app.main.service.database_key_service import (
+    generate_keys,
+    get_database_keys_by_database_id,
+)
 from app.main.service.valid_database_service import get_valid_database
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE

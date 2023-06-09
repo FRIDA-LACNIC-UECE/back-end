@@ -10,5 +10,6 @@ from .encryption_service import *
 from .global_service import *
 from .sql_log_service import *
 from .sse_service import *
+from .table_service import *
 from .user_service import *
 from .valid_database_service import *
