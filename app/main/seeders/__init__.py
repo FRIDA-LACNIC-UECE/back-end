@@ -1,5 +1,6 @@
 from .anonymization_record_seeder import *
 from .anonymization_type_seeder import *
+from .column_seeder import *
 from .database_key_seeder import *
 from .database_seeder import *
 from .sql_log_seeder import *
