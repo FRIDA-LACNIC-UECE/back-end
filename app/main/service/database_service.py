@@ -8,9 +8,18 @@ from werkzeug.datastructures import ImmutableMultiDict
 from app.main import db
 from app.main.config import Config
 from app.main.exceptions import DefaultException, ValidationException
-from app.main.model import AnonymizationRecord, Database, DatabaseKey, User
-from app.main.service.database_key_service import get_database_keys_by_database_id
-from app.main.service.database_key_service import generate_keys
+from app.main.model import (
+    AnonymizationRecord,
+    Database,
+    DatabaseKey,
+    SqlLog,
+    Table,
+    User,
+)
+from app.main.service.database_key_service import (
+    generate_keys,
+    get_database_keys_by_database_id,
+)
 from app.main.service.valid_database_service import get_valid_database
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
@@ -128,25 +137,42 @@ def update_database(database_id: int, current_user: User, data: dict[str, str]) 
 
 
 def delete_database(database_id: int, current_user: User) -> None:
-    database = get_database(database_id=database_id)
+    database = get_database(
+        database_id=database_id, current_user=current_user, admin_permission=True
+    )
 
-    if (not current_user.is_admin) and (database.user_id != current_user.id):
-        raise DefaultException("unauthorized_user", code=401)
+    try:
+        database_keys = get_database_keys_by_database_id(database_id=database_id)
 
-    database_keys = get_database_keys_by_database_id(database_id=database_id)
-
-    if database_keys:
-        db.session.delete(database_keys)
-        db.session.flush()
-
-    anonymization_records = AnonymizationRecord.query.filter(
-        AnonymizationRecord.database_id == database_id
-    ).all()
-
-    if anonymization_records:
-        for anonymization_record in anonymization_records:
-            db.session.delete(anonymization_record)
+        if database_keys:
+            db.session.delete(database_keys)
             db.session.flush()
+
+        anonymization_records = AnonymizationRecord.query.filter(
+            AnonymizationRecord.database_id == database_id
+        ).all()
+
+        if anonymization_records:
+            for anonymization_record in anonymization_records:
+                db.session.delete(anonymization_record)
+                db.session.flush()
+
+        sql_logs = SqlLog.query.filter(SqlLog.database_id == database_id).all()
+
+        if sql_logs:
+            for sql_log in sql_logs:
+                db.session.delete(sql_log)
+                db.session.flush()
+
+        tables = Table.query.filter(Table.database_id == database_id).all()
+
+        if tables:
+            for table in tables:
+                db.session.delete(table)
+                db.session.flush()
+    except:
+        db.session.rollback()
+        raise DefaultException("database_not_deleted", code=500)
 
     db.session.delete(database)
     db.session.commit()

@@ -7,5 +7,6 @@ from .database_dto import *
 from .default_responses_dto import *
 from .encryption_dto import *
 from .sql_log_dto import *
+from .table_dto import *
 from .user_dto import *
 from .valid_database_dto import *
