@@ -2,6 +2,7 @@ from app.main import db
 from app.main.seeders import (
     add_anonymization_records,
     add_anonymization_types,
+    add_columns,
     add_database,
     add_database_keys,
     add_sql_logs,
@@ -21,6 +22,7 @@ def create_seed(env_name: str):
     add_anonymization_types()
     add_sql_logs()
     add_tables()
+    add_columns()
     db.session.flush()
 
     if env_name == "dev":

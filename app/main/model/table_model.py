@@ -14,6 +14,7 @@ class Table(db.Model):
     update_at = db.Column(db.DateTime, onupdate=func.now())
 
     database = db.relationship("Database", back_populates="tables", lazy=True)
+    columns = db.relationship("Column", back_populates="table", lazy=True)
 
     @property
     def encrypted(self):
