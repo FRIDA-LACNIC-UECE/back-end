@@ -1,3 +1,4 @@
+from .activation_service import *
 from .agent_service import *
 from .anonymization_record_service import *
 from .anonymization_service import *
@@ -14,3 +15,4 @@ from .sse_service import *
 from .table_service import *
 from .user_service import *
 from .valid_database_service import *
+from .password_service import *

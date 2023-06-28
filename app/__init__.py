@@ -2,6 +2,9 @@
 
 from flask_restx import Api
 
+from app.main.exceptions import DefaultException, ValidationException
+from app.main.util import ActivationDTO, ColumnDTO, DefaultResponsesDTO, TableDTO
+
 from .main.controller import (
     agent_ns,
     anonymization_ns,
@@ -10,12 +13,11 @@ from .main.controller import (
     auth_ns,
     database_ns,
     encryption_ns,
+    password_ns,
     sql_log_ns,
     user_ns,
     valid_database_ns,
 )
-from .main.exceptions import DefaultException, ValidationException
-from .main.util import ColumnDTO, DefaultResponsesDTO, TableDTO
 
 authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
@@ -29,6 +31,7 @@ api = Api(
 
 api.add_namespace(user_ns, path="/user")
 api.add_namespace(auth_ns, path="/login")
+api.add_namespace(password_ns, path="/password")
 api.add_namespace(valid_database_ns, path="/valid_database")
 api.add_namespace(database_ns, path="/database")
 api.add_namespace(anonymization_type_ns, path="/anonymization_type")
@@ -41,6 +44,7 @@ api.add_namespace(agent_ns, path="/agent")
 api.add_namespace(DefaultResponsesDTO.api)
 api.add_namespace(TableDTO.api)
 api.add_namespace(ColumnDTO.api)
+api.add_namespace(ActivationDTO.api)
 
 # Exception Handler
 api.errorhandler(DefaultException)
