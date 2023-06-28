@@ -10,6 +10,7 @@ def add_user():
         email="admin@example.com",
         password=generate_password_hash("admin123"),
         is_admin=1,
+        status="active",
     )
 
     db.session.add(admin_user)
@@ -20,6 +21,7 @@ def add_user():
         email="convidado@example.com",
         password=generate_password_hash("convidado123"),
         is_admin=0,
+        status="active",
     )
 
     db.session.add(new_user)

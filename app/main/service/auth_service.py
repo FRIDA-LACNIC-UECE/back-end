@@ -1,15 +1,19 @@
 from datetime import datetime, timedelta
+import random
+import string
+import bcrypt
+import jwt
+
 from functools import wraps
 from typing import Dict
 
-import bcrypt
-import jwt
 from flask import request
 from werkzeug.security import check_password_hash
 
 from app.main.config import app_config
 from app.main.exceptions.default_exception import DefaultException
 from app.main.model import User
+
 
 _secret_key = app_config.SECRET_KEY
 _jwt_exp = app_config.JWT_EXP
@@ -26,11 +30,28 @@ def check_pw(p1: str, p2: str) -> bool:
     return bcrypt.checkpw(p1, p2)
 
 
+def token_generate(seed=None, size=64) -> str:
+    if seed is not None:
+        random.seed(seed)
+    return "".join(
+        random.SystemRandom().choice(
+            string.ascii_uppercase + string.ascii_lowercase + string.digits
+        )
+        for _ in range(size)
+    )
+
+
 def login(data: Dict[str, any]) -> tuple[str, User]:
     user = User.query.filter_by(email=data.get("email")).first()
 
     if not user:
         raise DefaultException(message="user_not_found", code=404)
+
+    if user.status == "wait_activation":
+        raise DefaultException("wait_activation", code=409)
+
+    if user.status == "blocked":
+        raise DefaultException("user_is_blocked", code=409)
 
     login_pwd = data.get("password")
     user_pwd = user.password
@@ -50,7 +71,11 @@ def jwt_user_required(f):
 
         if "Authorization" in request.headers:
             token = request.headers.get("Authorization")
-            token = token.replace("Bearer ", "")
+
+            if token[:7] != "Bearer ":
+                raise DefaultException("token_invalid", code=401)
+
+            token = token[7:]
 
         if not token:
             raise DefaultException("token_not_found", code=401)

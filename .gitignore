@@ -8,3 +8,8 @@
 env/
 ENV/
 venv/
+
+# Config files
+*export_env_variables_backend.sh
+
+
