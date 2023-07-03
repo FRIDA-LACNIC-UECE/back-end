@@ -19,8 +19,8 @@ _default_message_response = DefaultResponsesDTO.message_response
 _validation_error_response = DefaultResponsesDTO.validation_error
 
 
-@api.route("/table/<int:database_id>")
-class DatabaseEncryption(Resource):
+@api.route("/table")
+class DatabaseTableEncryption(Resource):
     @api.doc("Encrypt database table")
     @api.expect(_encrypt_database_table, validate=True)
     @api.response(200, "table_encrypted", _default_message_response)
@@ -30,18 +30,17 @@ class DatabaseEncryption(Resource):
         "token_not_found\ntoken_invalid\nunauthorized_user",
         _default_message_response,
     )
+    @api.response(404, "database_not_found\ntable_not_found", _default_message_response)
     @api.response(500, "table_not_encrypted", _default_message_response)
     @token_required()
-    def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
-        """Encrypt database"""
+    def post(self, current_user) -> tuple[dict[str, str], int]:
+        """Encrypt database table"""
         data = request.json
-        encrypt_database_table(
-            database_id=database_id, data=data, current_user=current_user
-        )
+        encrypt_database_table(data=data, current_user=current_user)
         return {"message": "table_encrypted"}, 200
 
 
-@api.route("/database_rows/<int:database_id>")
+@api.route("/database_rows")
 class DatabaseRowsEncryption(Resource):
     @api.doc("Encrypt database rows")
     @api.expect(_encryption_database_rows, validate=True)
@@ -54,12 +53,10 @@ class DatabaseRowsEncryption(Resource):
     )
     @api.response(500, "database_rows_not_encrypted", _default_message_response)
     @token_required()
-    def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
+    def post(self, current_user) -> tuple[dict[str, str], int]:
         """Encrypt database rows"""
         data = request.json
-        encrypt_database_row(
-            database_id=database_id, data=data, current_user=current_user
-        )
+        encrypt_database_row(data=data, current_user=current_user)
         return {"message": "database_rows_encrypted"}, 200
 
 

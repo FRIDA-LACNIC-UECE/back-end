@@ -91,8 +91,8 @@ def delete_table(table_id: int, database_id: int, current_user: User) -> None:
 
 
 def get_table(
-    table_id: int,
     database_id: int,
+    table_id: int,
     current_user: User,
     options: list = None,
 ) -> Table:

@@ -19,21 +19,20 @@ _default_message_response = DefaultResponsesDTO.message_response
 _validation_error_response = DefaultResponsesDTO.validation_error
 
 
-@api.route("/table/<int:database_id>")
+@api.route("/table")
 class DatabaseTableAnonymization(Resource):
     @api.doc("Anonymize database table")
     @api.expect(_table_anonymization, validate=True)
     @api.response(200, "table_anonymized", _default_message_response)
     @api.response(400, "Input payload validation failed", _validation_error_response)
+    @api.response(404, "database_not_found\ntable_not_found", _default_message_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(500, "table_not_anonymized", _default_message_response)
     @token_required()
-    def post(self, database_id, current_user) -> tuple[dict[str, str], int]:
+    def post(self, current_user) -> tuple[dict[str, str], int]:
         """Anonymize database table"""
         data = request.json
-        anonymization_table(
-            database_id=database_id, data=data, current_user=current_user
-        )
+        anonymization_table(data=data, current_user=current_user)
         return {"message": "table_anonymized"}, 200
 
 

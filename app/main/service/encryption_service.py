@@ -1,13 +1,15 @@
 import base64
-
+from sqlalchemy import func
 import pandas as pd
 import rsa
+import time
+from app.main import db
 from sqlalchemy import create_engine, insert, select, update
 from sqlalchemy_utils import create_database, database_exists, drop_database
 
 from app.main.config import app_config
 from app.main.exceptions import DefaultException, ValidationException
-from app.main.model import DatabaseKey, User
+from app.main.model import DatabaseKey, User, Table
 from app.main.service.database_key_service import load_keys
 from app.main.service.database_service import (
     get_database,
@@ -19,8 +21,14 @@ from app.main.service.global_service import (
     get_cloud_database_url,
     get_primary_key_name,
 )
+from app.main.service.table_service import get_table
 
 _batch_selection_size = app_config.BATCH_SELECTION_SIZE
+
+
+def _calculate_progress(table: Table, number_row_selected: int, number_row_total: int):
+    table.encryption_progress = (number_row_selected // number_row_total) * 100
+    db.session.commit()
 
 
 def encrypt(message, key):
@@ -81,11 +89,15 @@ def encrypt_database_row(
     data: dict[str, str],
     current_user: User,
 ) -> tuple[int, str]:
-    table_name = data.get("table_name")
+    database_id = data.get("database_id")
+    table_id = data.get("table_id")
     rows_to_encrypt = data.get("rows_to_encrypt")
     update_database = data.get("update_database")
 
-    # Get client database
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
+
     get_database(database_id=database_id, current_user=current_user)
 
     # Create cloud database if not exist
@@ -107,16 +119,16 @@ def encrypt_database_row(
 
     # Get columns to encrypt
     primary_key_name = get_primary_key_name(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_name=table.name
     )
     columns_list = [primary_key_name] + get_sensitive_columns(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_name=table.name
     )["sensitive_column_names"]
 
     # Create cloud table connection
     cloud_table_connection = create_table_connection(
         database_url=cloud_database_engine.url,
-        table_name=table_name,
+        table_name=table.name,
         columns_list=columns_list,
     )
 
@@ -165,12 +177,14 @@ def encrypt_database_row(
         cloud_table_connection.close()
 
 
-def encrypt_database_table(
-    database_id: int, data: dict[str, str], current_user: User
-) -> None:
-    table_name = data.get("table_name")
+def encrypt_database_table(data: dict[str, str], current_user: User) -> None:
+    database_id = data.get("database_id")
+    table_id = data.get("table_id")
 
-    # Get client database url
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
+
     database = get_database(
         database_id=database_id, current_user=current_user, verify_connection=True
     )
@@ -187,15 +201,15 @@ def encrypt_database_table(
 
         # Create client table connection
         client_table_connection = create_table_connection(
-            database_url=database.url, table_name=table_name
+            database_url=database.url, table_name=table.name
         )
 
         # Get client table columns
         primary_key_name = get_primary_key_name(
-            database_id=database_id, table_name=table_name
+            database_id=database_id, table_name=table.name
         )
         columns_list = [primary_key_name] + get_sensitive_columns(
-            database_id=database_id, table_name=table_name
+            database_id=database_id, table_name=table.name
         )["sensitive_column_names"]
 
         # Load rsa keys
@@ -218,6 +232,15 @@ def encrypt_database_table(
             _batch_selection_size
         )  # Getting rows database
 
+        number_row_selected = 0
+
+        number_row_total = (
+            client_table_connection.session.query(func.count())
+            .select_from(client_table_connection.table)
+            .scalar()
+        )
+        print(f"Total = {number_row_total}")
+
         while results:
             from_db = [row._asdict() for row in results]
 
@@ -239,17 +262,32 @@ def encrypt_database_table(
 
             # Send data to database
             dataframe_db.to_sql(
-                table_name,
+                table.name,
                 cloud_database_engine.connect(),
                 if_exists="append",
                 index=False,
             )
 
+            number_row_selected += _batch_selection_size
+
+            _calculate_progress(
+                table=table,
+                number_row_selected=number_row_selected,
+                number_row_total=number_row_total,
+            )
+
+            time.sleep(5)
+            print(f"Progress = {(number_row_selected // number_row_total ) * 100}")
+
             results = results_proxy.fetchmany(
                 _batch_selection_size
             )  # Getting next rows database
 
+        table.encryption_progress = 100
+        db.session.commit()
     except:
+        table.encryption_progress = 0
+        db.session.commit()
         raise DefaultException("table_not_encrypted", code=500)
     finally:
         client_table_connection.close()
@@ -257,13 +295,17 @@ def encrypt_database_table(
 
 
 def decrypt_row(
-    database_id: int,
     data: dict[str, str],
     current_user: User = None,
 ) -> dict:
-    table_name = data.get("table_name")
+    database_id = data.get("database_id")
+    table_id = data.get("table_id")
     search_type = data.get("search_type")
     search_value = data.get("search_value")
+
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
 
     client_database = get_database(database_id=database_id, current_user=current_user)
 
@@ -272,12 +314,12 @@ def decrypt_row(
 
     # Create cloud table connection
     cloud_table_connection = create_table_connection(
-        database_url=cloud_database_url, table_name=table_name
+        database_url=cloud_database_url, table_name=table.name
     )
 
     # Get primary key name of Client Database
     primary_key_name = get_primary_key_name(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_name=table.name
     )
 
     try:
@@ -338,7 +380,7 @@ def decrypt_row(
 
         # Create client table connection
         client_table_connection = create_table_connection(
-            database_url=client_database.url, table_name=table_name
+            database_url=client_database.url, table_name=table.name
         )
 
         # Searching to row on Client Database
@@ -374,7 +416,7 @@ def decrypt_row(
 
         # Fix columns types of row
         columns_types = get_database_columns_types(
-            database_id=database_id, table_name=table_name
+            database_id=database_id, table_name=table.name
         )
 
         for key in columns_types.keys():
