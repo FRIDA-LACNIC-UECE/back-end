@@ -1,4 +1,3 @@
-from flask import request
 from flask_restx import Resource
 
 from app.main.service import (
@@ -6,19 +5,20 @@ from app.main.service import (
     check_activation_token,
     resend_activation_email,
 )
-from app.main.util import ActivationDTO, DefaultResponsesDTO, UserDTO
+from app.main.util import DefaultResponsesDTO, UserDTO
 
 activation_ns = UserDTO.api
 api = activation_ns
 
 _default_message_response = DefaultResponsesDTO.message_response
+_validation_error_response = DefaultResponsesDTO.validation_error
 
 
 @api.route("/activate_user/<string:token>")
 class ActivationUser(Resource):
     @api.doc("Activate user")
     @api.response(200, "user_activated", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(401, "token_expired", _default_message_response)
     @api.response(409, "token_invalid", _default_message_response)
     @api.response(

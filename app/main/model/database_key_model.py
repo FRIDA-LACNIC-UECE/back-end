@@ -17,4 +17,4 @@ class DatabaseKey(db.Model):
     database = db.relationship("Database", back_populates="database_key")
 
     def __repr__(self):
-        return f"<DatabaseKey: {self.database_id}"
+        return f"<Database Key: {self.database_id}"

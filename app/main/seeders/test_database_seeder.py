@@ -151,12 +151,12 @@ def create_test_frida_db(USER, DB_PW, HOST, DB_NAME):
         insert_data(
             engine_db=engine_db_test,
             table_name=TABLE_NAME,
-            num_of_rows=10000,
+            num_of_rows=1000,
             seed=seed,
         )
         insert_data(
             engine_db=engine_db_backup,
             table_name=TABLE_NAME,
-            num_of_rows=10000,
+            num_of_rows=1000,
             seed=seed,
         )

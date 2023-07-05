@@ -1,7 +1,7 @@
 from flask_restx import Api
 
 from app.main.exceptions import DefaultException, ValidationException
-from app.main.util import ActivationDTO, ColumnDTO, DefaultResponsesDTO, TableDTO
+from app.main.util import ActivationDTO, DefaultResponsesDTO, TableDTO
 
 from .main.controller import (
     agent_ns,
@@ -41,7 +41,6 @@ api.add_namespace(agent_ns, path="/agent")
 
 api.add_namespace(DefaultResponsesDTO.api)
 api.add_namespace(TableDTO.api)
-api.add_namespace(ColumnDTO.api)
 api.add_namespace(ActivationDTO.api)
 
 # Exception Handler

@@ -1,33 +1,34 @@
 import base64
-from sqlalchemy import func
+
 import pandas as pd
 import rsa
-import time
-from app.main import db
-from sqlalchemy import create_engine, insert, select, update
+from sqlalchemy import create_engine, func, insert, select, update
 from sqlalchemy_utils import create_database, database_exists, drop_database
 
+from app.main import db
 from app.main.config import app_config
 from app.main.exceptions import DefaultException, ValidationException
-from app.main.model import DatabaseKey, User, Table
+from app.main.model import DatabaseKey, Table, User
 from app.main.service.database_key_service import load_keys
 from app.main.service.database_service import (
     get_database,
     get_database_columns_types,
-    get_sensitive_columns,
+    get_database_tables_names,
 )
 from app.main.service.global_service import (
     create_table_connection,
     get_cloud_database_url,
     get_primary_key_name,
 )
-from app.main.service.table_service import get_table
+from app.main.service.table_service import get_sensitive_columns, get_table
 
 _batch_selection_size = app_config.BATCH_SELECTION_SIZE
 
 
-def _calculate_progress(table: Table, number_row_selected: int, number_row_total: int):
-    table.encryption_progress = (number_row_selected // number_row_total) * 100
+def _calculate_progress(
+    table: Table, number_row_selected: int, number_row_total: int
+) -> None:
+    table.encryption_progress = int((number_row_selected / number_row_total) * 100)
     db.session.commit()
 
 
@@ -38,9 +39,8 @@ def encrypt(message, key):
     # Convert from byte to base64
     base64_encrypted_message = base64.b64encode(encrypted_message)
 
-    return str(base64_encrypted_message)[
-        2:-1
-    ]  # Remove caracter "b'" [0-1] and "'"[-1] of byte format.
+    # Remove caracter "b'" [0-1] and "'"[-1] of byte format.
+    return str(base64_encrypted_message)[2:-1]
 
 
 def decrypt(encrypted_message, key):
@@ -86,11 +86,10 @@ def decrypt_dict(data_dict, key):
 
 def encrypt_database_row(
     database_id: int,
+    table_id: int,
     data: dict[str, str],
     current_user: User,
-) -> tuple[int, str]:
-    database_id = data.get("database_id")
-    table_id = data.get("table_id")
+) -> None:
     rows_to_encrypt = data.get("rows_to_encrypt")
     update_database = data.get("update_database")
 
@@ -98,7 +97,16 @@ def encrypt_database_row(
         database_id=database_id, table_id=table_id, current_user=current_user
     )
 
-    get_database(database_id=database_id, current_user=current_user)
+    get_database(
+        database_id=database_id, current_user=current_user, verify_connection=True
+    )
+
+    database_tables_names = get_database_tables_names(
+        database_id=database_id, current_user=current_user
+    )
+
+    if not table.name in database_tables_names["table_names"]:
+        raise DefaultException("outdated_table", code=409)
 
     # Create cloud database if not exist
     cloud_database_url = get_cloud_database_url(database_id=database_id)
@@ -117,10 +125,12 @@ def encrypt_database_row(
         privateKeyStr=database_keys.private_key,
     )
 
-    # Get columns to encrypt
+    # Get primary key name
     primary_key_name = get_primary_key_name(
         database_id=database_id, table_name=table.name
     )
+
+    # Get column names to encrypt along with primary key name
     columns_list = [primary_key_name] + get_sensitive_columns(
         database_id=database_id, table_name=table.name
     )["sensitive_column_names"]
@@ -132,12 +142,15 @@ def encrypt_database_row(
         columns_list=columns_list,
     )
 
+    # Encrypt database rows
     try:
+        # Update database is true update on cloud database
         if update_database:
             for row in rows_to_encrypt:
                 row = {key: row[key] for key in columns_list}
 
                 primary_key_value = row[primary_key_name]
+
                 row.pop(primary_key_name, None)
 
                 row = encrypt_dict(data_dict=row, key=public_key)
@@ -152,11 +165,11 @@ def encrypt_database_row(
                 )
 
                 cloud_table_connection.session.execute(statement)
-
                 cloud_table_connection.session.flush()
         else:
             for row in rows_to_encrypt:
                 primary_key_value = row[primary_key_name]
+
                 row.pop(primary_key_name, None)
 
                 row = encrypt_dict(data_dict=row, key=public_key)
@@ -166,21 +179,19 @@ def encrypt_database_row(
                 statement = insert(cloud_table_connection.table).values(row)
 
                 cloud_table_connection.session.execute(statement)
-
                 cloud_table_connection.session.flush()
 
         cloud_table_connection.session.commit()
+
     except:
         cloud_table_connection.session.rollback()
         raise DefaultException("database_rows_not_encrypted", code=500)
+
     finally:
         cloud_table_connection.close()
 
 
-def encrypt_database_table(data: dict[str, str], current_user: User) -> None:
-    database_id = data.get("database_id")
-    table_id = data.get("table_id")
-
+def encrypt_database_table(database_id: int, table_id: int, current_user: User) -> None:
     table = get_table(
         database_id=database_id, table_id=table_id, current_user=current_user
     )
@@ -188,6 +199,13 @@ def encrypt_database_table(data: dict[str, str], current_user: User) -> None:
     database = get_database(
         database_id=database_id, current_user=current_user, verify_connection=True
     )
+
+    database_tables_names = get_database_tables_names(
+        database_id=database_id, current_user=current_user
+    )
+
+    if not table.name in database_tables_names["table_names"]:
+        raise DefaultException("outdated_table", code=409)
 
     try:
         # Create cloud database if not exist
@@ -204,12 +222,14 @@ def encrypt_database_table(data: dict[str, str], current_user: User) -> None:
             database_url=database.url, table_name=table.name
         )
 
-        # Get client table columns
+        # Get primary key name
         primary_key_name = get_primary_key_name(
             database_id=database_id, table_name=table.name
         )
+
+        # Get column names to encrypt along with primary key name
         columns_list = [primary_key_name] + get_sensitive_columns(
-            database_id=database_id, table_name=table.name
+            database_id=database_id, table_id=table.id
         )["sensitive_column_names"]
 
         # Load rsa keys
@@ -223,36 +243,37 @@ def encrypt_database_table(data: dict[str, str], current_user: User) -> None:
             privateKeyStr=database_keys.private_key,
         )
 
-        # Encrypt database
+        # Proxy to get data on batch
         results_proxy = client_table_connection.session.execute(
             select(client_table_connection.table)
-        )  # Proxy to get data on batch
+        )
 
-        results = results_proxy.fetchmany(
-            _batch_selection_size
-        )  # Getting rows database
+        # Getting rows database
+        results = results_proxy.fetchmany(_batch_selection_size)
 
+        # Start number row selected
         number_row_selected = 0
 
+        # Get number row total
         number_row_total = (
             client_table_connection.session.query(func.count())
             .select_from(client_table_connection.table)
             .scalar()
         )
-        print(f"Total = {number_row_total}")
 
+        # Encrypt database table
         while results:
             from_db = [row._asdict() for row in results]
 
             # Create dataframe with data original database
             dataframe_db = pd.DataFrame(from_db, columns=columns_list)
 
-            # Create name_columns without id
-            names_columns = columns_list.copy()
-            names_columns.remove(primary_key_name)
+            # Create columns names without id
+            columns_names = columns_list.copy()
+            columns_names.remove(primary_key_name)
 
             # Encrypt each column
-            for column in names_columns:
+            for column in columns_names:
                 dataframe_db[column] = encrypt_list(
                     list(dataframe_db[column]), public_key
                 )
@@ -276,30 +297,37 @@ def encrypt_database_table(data: dict[str, str], current_user: User) -> None:
                 number_row_total=number_row_total,
             )
 
-            time.sleep(5)
-            print(f"Progress = {(number_row_selected // number_row_total ) * 100}")
-
-            results = results_proxy.fetchmany(
-                _batch_selection_size
-            )  # Getting next rows database
+            # Getting next rows database
+            results = results_proxy.fetchmany(_batch_selection_size)
 
         table.encryption_progress = 100
-        db.session.commit()
+
     except:
         table.encryption_progress = 0
-        db.session.commit()
         raise DefaultException("table_not_encrypted", code=500)
+
     finally:
         client_table_connection.close()
         cloud_database_engine.dispose()
+        db.session.commit()
+
+
+def get_encryption_progress(
+    database_id: int, table_id: int, current_user: User
+) -> None:
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
+
+    return {"progress": table.encryption_progress}
 
 
 def decrypt_row(
+    database_id: int,
+    table_id: int,
     data: dict[str, str],
     current_user: User = None,
-) -> dict:
-    database_id = data.get("database_id")
-    table_id = data.get("table_id")
+) -> dict[str, any] | None:
     search_type = data.get("search_type")
     search_value = data.get("search_value")
 
@@ -307,7 +335,9 @@ def decrypt_row(
         database_id=database_id, table_id=table_id, current_user=current_user
     )
 
-    client_database = get_database(database_id=database_id, current_user=current_user)
+    client_database = get_database(
+        database_id=database_id, current_user=current_user, verify_connection=True
+    )
 
     # Get cloud database url
     cloud_database_url = get_cloud_database_url(database_id=database_id)
@@ -317,7 +347,7 @@ def decrypt_row(
         database_url=cloud_database_url, table_name=table.name
     )
 
-    # Get primary key name of Client Database
+    # Get primary key name
     primary_key_name = get_primary_key_name(
         database_id=database_id, table_name=table.name
     )
@@ -345,12 +375,12 @@ def decrypt_row(
             )
         else:
             raise ValidationException(
-                errors={"decryption": "search_invalid_data"},
+                errors={"search_type": "invalid search type"},
                 message="Input payload validation failed",
             )
 
         if not query_sensitive_data:
-            raise DefaultException("cloud_row_not_found", code=404)
+            raise DefaultException("row_not_found", code=404)
 
         # Transform sensitive data query to dictionary
         dict_sensitive_data = [row._asdict() for row in query_sensitive_data][0]
@@ -360,13 +390,13 @@ def decrypt_row(
         remove_line_hash_response = dict_sensitive_data.pop("line_hash", None)
 
         if remove_primary_key_response == None or remove_line_hash_response == None:
-            raise DefaultException("internal_server_error", code=500)
+            raise DefaultException("row_not_decrypted", code=500)
 
-        # Load encryption keys
+        # Load rsa keys
         database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()
 
         if not database_keys:
-            raise DefaultException("database_keys_not_found", code=404)
+            raise DefaultException("row_not_decrypted", code=500)
 
         _, private_key = load_keys(
             publicKeyStr=database_keys.public_key,
@@ -394,7 +424,7 @@ def decrypt_row(
         )
 
         if not query_non_sensitive_data:
-            raise DefaultException("client_row_not_found", code=404)
+            raise DefaultException("row_not_found", code=404)
 
         # Transform non-sensitive data query to dictionary
         dict_result_data = [row._asdict() for row in query_non_sensitive_data][0]

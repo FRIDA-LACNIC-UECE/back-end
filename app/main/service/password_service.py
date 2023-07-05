@@ -1,13 +1,13 @@
 from time import time
 
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from app.main import db
 from app.main.config import Config
 from app.main.exceptions import DefaultException
 from app.main.model import User
 from app.main.service.activation_service import token_generate
 from app.main.service.email_service import send_email_recovery
-from app.main.service.user_service import get_user
-from werkzeug.security import generate_password_hash, check_password_hash
 
 _EXP_ACTIVATION = Config.ACTIVATION_EXP_SECONDS
 

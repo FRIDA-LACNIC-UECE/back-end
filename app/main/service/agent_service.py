@@ -4,7 +4,7 @@ from werkzeug.datastructures import ImmutableMultiDict
 from app.main.exceptions import DefaultException, ValidationException
 from app.main.model import User
 from app.main.service.anonymization_service import anonymization_database_rows
-from app.main.service.database_service import get_database, get_sensitive_columns
+from app.main.service.database_service import get_database
 from app.main.service.encryption_service import decrypt_row, encrypt_database_row
 from app.main.service.global_service import (
     create_table_connection,
@@ -13,6 +13,7 @@ from app.main.service.global_service import (
 )
 from app.main.service.sql_log_service import updates_log
 from app.main.service.sse_service import generate_hash_rows
+from app.main.service.table_service import get_sensitive_columns
 
 
 def show_rows_hash(

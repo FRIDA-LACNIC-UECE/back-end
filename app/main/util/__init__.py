@@ -4,7 +4,6 @@ from .anonymization_dto import *
 from .anonymization_record_dto import *
 from .anonymization_type_dto import *
 from .auth_dto import *
-from .column_dto import *
 from .database_dto import *
 from .default_responses_dto import *
 from .encryption_dto import *
