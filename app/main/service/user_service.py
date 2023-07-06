@@ -1,3 +1,4 @@
+import re
 from math import ceil
 from time import time
 
@@ -16,15 +17,16 @@ _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
 _EXP_ACTIVATION = Config.ACTIVATION_EXP_SECONDS
 
 
-def get_users(params: ImmutableMultiDict) -> dict[str, any]:
+def get_users(params: ImmutableMultiDict, current_user: User) -> dict[str, any]:
     page = params.get("page", type=int, default=1)
     per_page = params.get("per_page", type=int, default=_DEFAULT_CONTENT_PER_PAGE)
     username = params.get("username", type=str)
 
     filters = []
 
-    if username is not None:
-        filters.append(User.username.ilike(f"%{username}%"))
+    if current_user and current_user.id in [user.id for user in User.query.all()]:
+        if username is not None:
+            filters.append(User.username.ilike(f"%{username}%"))
 
     pagination = (
         User.query.filter(*filters)
@@ -40,8 +42,9 @@ def get_users(params: ImmutableMultiDict) -> dict[str, any]:
     }
 
 
-def get_user_by_id(user_id: int) -> User:
-    return get_user(user_id=user_id)
+def get_user_by_id(user_id: int, current_user: User) -> User:
+    if current_user and current_user.id in [user.id for user in User.query.all()]:
+        return get_user(user_id=user_id)
 
 
 def save_new_user(data: dict[str, str]) -> None:
@@ -72,8 +75,11 @@ def save_new_user(data: dict[str, str]) -> None:
     )
 
 
-def delete_user(user_id: int) -> None:
+def delete_user(user_id: int, current_user: User) -> None:
     user = get_user(user_id=user_id)
+
+    if current_user.is_admin != 1:
+        return (403, "required_administrator_privileges")
 
     _verify_user_relationship(user_id=user_id)
 
@@ -96,6 +102,12 @@ def get_user(user_id: int, options: list = None) -> User:
 
 
 def _validate_user_constraint(username: str, email: str) -> None:
+    if re.search(r"\s|\W", username):
+        raise DefaultException("Input payload validation failed", code=400)
+
+    if re.search(r"\s", email):
+        raise DefaultException("Input payload validation failed", code=400)
+
     filters = [or_(User.username == username, User.email == email)]
 
     if (

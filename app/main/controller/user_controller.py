@@ -46,10 +46,10 @@ class User(Resource):
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @token_required(admin_privileges_required=True)
-    def get(self) -> tuple[dict[str, any], int]:
+    def get(self, current_user) -> tuple[dict[str, any], int]:
         """List all registered users"""
         params = request.args
-        return get_users(params=params)
+        return get_users(params=params, current_user=current_user)
 
     @api.doc("Create a new user")
     @api.expect(_user_post, validate=True)
@@ -72,7 +72,7 @@ class CurrentUser(Resource):
     @token_required()
     def get(self, current_user: User) -> tuple[dict[str, any], int]:
         """Get current user"""
-        return get_user_by_id(user_id=current_user.id)
+        return get_user_by_id(user_id=current_user.id, current_user=current_user)
 
 
 @api.route("/<int:user_id>")
@@ -83,9 +83,13 @@ class UserById(Resource):
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "user_not_found", _default_message_response)
     @token_required(admin_privileges_required=True)
-    def get(self, user_id: int) -> tuple[dict[str, any], int]:
+    def get(
+        self,
+        user_id: int,
+        current_user,
+    ) -> tuple[dict[str, any], int]:
         """Get user by id"""
-        return get_user_by_id(user_id=user_id)
+        return get_user_by_id(user_id=user_id, current_user=current_user)
 
     @api.doc("Delete a user")
     @api.response(200, "user_deleted", _default_message_response)
@@ -93,7 +97,7 @@ class UserById(Resource):
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "user_not_found", _default_message_response)
     @token_required(admin_privileges_required=True)
-    def delete(self, user_id: int) -> tuple[dict[str, str], int]:
+    def delete(self, user_id: int, current_user) -> tuple[dict[str, str], int]:
         """Delete a user"""
-        delete_user(user_id=user_id)
+        delete_user(user_id=user_id, current_user=current_user)
         return {"message": "user_deleted"}, 200
