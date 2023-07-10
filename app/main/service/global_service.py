@@ -1,7 +1,7 @@
 import os
 
 from sqlalchemy import MetaData, Table, create_engine, inspect
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from app.main.exceptions import DefaultException
 from app.main.model.database_model import Database

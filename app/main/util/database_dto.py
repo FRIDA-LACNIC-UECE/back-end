@@ -99,16 +99,6 @@ class DatabaseDTO:
         {"table_columns": fields.Nested(database_table_column)},
     )
 
-    database_sensitive_columns = api.model(
-        "database_sensitive_columns",
-        {
-            "sensitive_column_names": fields.List(
-                fields.String(description="sensitive column name"),
-                description="sensitive column name list",
-            ),
-        },
-    )
-
     database_list = api.model(
         "database_list",
         {

@@ -49,6 +49,7 @@ def resend_activation_email(user_id: int) -> None:
         raise DefaultException("user_is_blocked", code=409)
 
     new_token = token_generate(user.email)
+
     user.activation_token = new_token
     user.activation_token_exp = int(time()) + _EXP_ACTIVATION
 

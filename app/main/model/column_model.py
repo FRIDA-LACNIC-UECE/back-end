@@ -1,3 +1,4 @@
+""""
 from sqlalchemy import func
 
 from app.main import db
@@ -8,7 +9,10 @@ class Column(db.Model):
 
     id = db.Column(db.Integer, nullable=False, autoincrement=True, primary_key=True)
     table_id = db.Column(db.Integer, db.ForeignKey("table.id"), nullable=False)
-    anonymization_type_id = db.Column(db.Integer, nullable=False)
+    anonymization_type_id = db.Column(
+        db.Integer, db.ForeignKey("anonymization_type.id")
+    )
+
     name = db.Column(db.String(1000), nullable=False)
     type = db.Column(db.String(1000), nullable=False)
     create_at = db.Column(db.DateTime, server_default=func.now())
@@ -17,4 +21,5 @@ class Column(db.Model):
     table = db.relationship("Table", back_populates="columns")
 
     def __repr__(self):
-        return f"<TableId: {self.table_id }, AnonimyzationTypeId: {self.anonimyzation_type_id}, Name: {self.name}, Type: {self.type}, CreateAt: {self.create_at}, UpdateAt: {self.update_at}>"
+        return f"<Column: {self.table.name} - {self.name}>"
+"""

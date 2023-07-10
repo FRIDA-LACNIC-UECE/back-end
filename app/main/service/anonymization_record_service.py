@@ -8,6 +8,7 @@ from app.main.exceptions import DefaultException
 from app.main.model import AnonymizationRecord, User
 from app.main.service.anonymization_type_service import get_anonymization_type
 from app.main.service.database_service import get_database
+from app.main.service.table_service import get_table
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
 
@@ -59,14 +60,20 @@ def save_new_anonymization_record(current_user: User, data: dict[str, str]) -> N
         database_id=data.get("database_id"), current_user=current_user
     )
 
+    table = get_table(
+        database_id=database.id,
+        table_id=data.get("table_id"),
+        current_user=current_user,
+    )
+
     anonymization_type = get_anonymization_type(
         anonymization_type_id=data.get("anonymization_type_id")
     )
 
     new_anonymization_record = AnonymizationRecord(
-        table=data.get("table_name"),
         columns=data.get("columns"),
         database=database,
+        table=table,
         anonymization_type=anonymization_type,
     )
 

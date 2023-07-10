@@ -1,24 +1,24 @@
+"""
 from app.main import db
-from app.main.model import Column, Database
+from app.main.model import Column
 
 
 def add_columns():
-    database = Database.query.get(1)
-
     new_column = Column(
         table_id=1,
         anonymization_type_id=1,
-        name="quantidade",
-        type="int",
+        name="cpf",
+        type="VARCHAR",
     )
     db.session.add(new_column)
 
     new_column = Column(
         table_id=1,
-        anonymization_type_id=1,
-        name="nome",
-        type="string",
+        anonymization_type_id=3,
+        name="email",
+        type="VARCHAR",
     )
     db.session.add(new_column)
 
     db.session.flush()
+"""

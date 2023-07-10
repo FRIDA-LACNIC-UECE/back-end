@@ -10,14 +10,15 @@ class TableDTO:
         "name": fields.String(required=True, description="table name", min_length=1)
     }
 
-    table_encryption_process = {
-        "encryption_process": fields.Integer(
-            required=True, description="encryption process", min=0, max=100
+    table_encryption_progress = {
+        "encryption_progress": fields.Integer(
+            required=True, description="encryption progress", min=0, max=100
         )
     }
-    table_anonimyzation_process = {
-        "anonimyzation_process": fields.Integer(
-            required=True, description="anonimyzation process", min=0, max=100
+
+    table_anonimyzation_progress = {
+        "anonimyzation_progress": fields.Integer(
+            required=True, description="anonimyzation progress", min=0, max=100
         )
     }
 
@@ -48,9 +49,19 @@ class TableDTO:
         table_id
         | table_name
         | table_encrypted
-        | table_encryption_process
+        | table_encryption_progress
         | table_anonymized
-        | table_anonimyzation_process,
+        | table_anonimyzation_progress,
+    )
+
+    table_sensitive_columns = api.model(
+        "table_sensitive_columns",
+        {
+            "sensitive_column_names": fields.List(
+                fields.String(description="sensitive column name"),
+                description="sensitive column name list",
+            ),
+        },
     )
 
     table_list = api.model(

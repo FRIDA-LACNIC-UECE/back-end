@@ -16,4 +16,4 @@ class SqlLog(db.Model):
     database = db.relationship("Database", back_populates="sql_logs")
 
     def __repr__(self) -> str:
-        return f"<SqlLog: database_id = {self.database_id} - sql_comand = {self.sql_command}>"
+        return f"<Sql Log: database_id = {self.database_id} - sql_comand = {self.sql_command}>"

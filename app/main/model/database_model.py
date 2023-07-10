@@ -33,9 +33,6 @@ class Database(db.Model):
 
     user = db.relationship("User", back_populates="databases")
     valid_database = db.relationship("ValidDatabase", back_populates="databases")
-    anonymization_records = db.relationship(
-        "AnonymizationRecord", back_populates="database"
-    )
     tables = db.relationship("Table", back_populates="database")
     database_key = db.relationship("DatabaseKey", back_populates="database")
     sql_logs = db.relationship("SqlLog", back_populates="database")

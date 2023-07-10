@@ -4,7 +4,6 @@ from .anonymization_record_service import *
 from .anonymization_service import *
 from .anonymization_type_service import *
 from .auth_service import *
-from .column_service import *
 from .database_key_service import *
 from .database_service import *
 from .encryption_service import *

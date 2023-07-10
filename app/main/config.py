@@ -28,7 +28,7 @@ class Config:
     DEFAULT_CONTENT_PER_PAGE = CONTENT_PER_PAGE[0]
 
     # Batch selection size
-    BATCH_SELECTION_SIZE = 100000
+    BATCH_SELECTION_SIZE = 100
 
 
 class DevelopmentConfig(Config):

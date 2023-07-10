@@ -1,15 +1,15 @@
 from flask import request
 from flask_restx import Resource
 
+from app.main.model import User
 from app.main.service import (
     change_password,
-    forgot_password,
     check_password_reset_token,
-    redefine_password,
+    forgot_password,
     jwt_user_required,
+    redefine_password,
 )
 from app.main.util import DefaultResponsesDTO, PasswordDTO
-from app.main.model import User
 
 password_ns = PasswordDTO.api
 api = password_ns
@@ -18,6 +18,7 @@ password_forgot = PasswordDTO.password_forgot
 password_redefine = PasswordDTO.password_redefine
 
 _default_message_response = DefaultResponsesDTO.message_response
+_validation_error_response = DefaultResponsesDTO.validation_error
 
 
 @api.route("/change")
@@ -25,7 +26,7 @@ class ChangePassword(Resource):
     @api.doc("Change password when logged in")
     @api.expect(password_change, validate=True)
     @api.response(200, "password_updated", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(404, "user_not_found", _default_message_response)
     @api.response(
         409,
@@ -45,7 +46,7 @@ class ForgotPassword(Resource):
     @api.doc("Forgot password")
     @api.expect(password_forgot, validate=True)
     @api.response(200, "recovery_email_sent", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(
         404, "user_not_found\nprofessional_not_found", _default_message_response
     )
@@ -74,7 +75,7 @@ class RedefinePassword(Resource):
     @api.doc("Redefine password")
     @api.expect(password_redefine, validate=True)
     @api.response(200, "password_updated", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(401, "token_expired", _default_message_response)
     @api.response(404, "user_not_found", _default_message_response)
     @api.response(409, "token_invalid", _default_message_response)

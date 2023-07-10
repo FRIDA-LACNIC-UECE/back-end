@@ -6,8 +6,6 @@ from app.main.model import User
 from app.main.service import (
     delete_database,
     get_database_by_id,
-    get_database_columns,
-    get_database_tables_names,
     get_databases,
     get_route_sensitive_columns,
     save_new_database,
@@ -26,9 +24,6 @@ _database_post = DatabaseDTO.database_post
 _database_test_connection_by_url = DatabaseDTO.database_post
 _database_response = DatabaseDTO.database_response
 _database_list = DatabaseDTO.database_list
-_database_tables = DatabaseDTO.database_tables
-_database_table_columns = DatabaseDTO.database_table_columns
-_database_sensitive_columns = DatabaseDTO.database_sensitive_columns
 
 _default_message_response = DefaultResponsesDTO.message_response
 _validation_error_response = DefaultResponsesDTO.validation_error
@@ -126,102 +121,7 @@ class DatabaseById(Resource):
         return {"message": "database_deleted"}, 200
 
 
-@api.route("/table_names/<int:database_id>")
-class DatabaseTables(Resource):
-    @api.doc("Get database table names by database id")
-    @api.marshal_with(
-        _database_tables, code=200, description="get_database_table_names"
-    )
-    @api.response(
-        401,
-        "token_not_found\ntoken_invalid\nunauthorized_user",
-        _default_message_response,
-    )
-    @api.response(404, "database_not_found", _default_message_response)
-    @api.response(409, "database_not_conected", _default_message_response)
-    @api.response(500, "internal_error_getting_tables_names", _default_message_response)
-    @token_required()
-    def get(self, database_id: int, current_user: User):
-        """Get database table names by id"""
-        return get_database_tables_names(
-            database_id=database_id, current_user=current_user
-        )
-
-
-@api.route("/table_columns/<int:database_id>")
-class DatabaseColumns(Resource):
-    @api.doc(
-        "Get database column names each table by id",
-        params={
-            "table_name": {
-                "description": "Database table name",
-                "type": str,
-                "required": True,
-            },
-        },
-        description="Get database column names each table by id.",
-    )
-    @api.marshal_with(
-        _database_table_columns, code=200, description="get_database_column_names"
-    )
-    @api.response(
-        401,
-        "token_not_found\ntoken_invalid\nunauthorized_user",
-        _default_message_response,
-    )
-    @api.response(404, "database_not_found\ntable_not_found", _default_message_response)
-    @api.response(409, "database_not_conected", _default_message_response)
-    @api.response(
-        500, "internal_error_getting_table_columns", _default_message_response
-    )
-    @token_required()
-    def get(self, database_id: int, current_user: User):
-        """Get database column names each table by id"""
-        params = request.args
-        return get_database_columns(
-            database_id=database_id, current_user=current_user, params=params
-        )
-
-
-@api.route("/sensitive_columns/<int:database_id>")
-class DatabaseSensitiveColumns(Resource):
-    @api.doc("Get database sensitive columns names each table by id")
-    @api.doc(
-        "List all registered databases of each user",
-        params={
-            "table_name": {
-                "description": "Database table name",
-                "type": str,
-                "required": True,
-            },
-        },
-        description=f"Get database sensitive columns names each table by id",
-    )
-    @api.marshal_with(
-        _database_sensitive_columns,
-        code=200,
-        description="get_database_sensitive_columns_names",
-    )
-    @api.response(
-        401,
-        "token_not_found\ntoken_invalid\nunauthorized_user",
-        _default_message_response,
-    )
-    @api.response(404, "database_not_found", _default_message_response)
-    @api.response(409, "database_not_conected", _default_message_response)
-    @api.response(
-        500, "internal_error_getting_sensitive_column_names", _default_message_response
-    )
-    @token_required()
-    def get(self, database_id: int, current_user: User):
-        """Get database sensitive columns names each table by id"""
-        params = request.args
-        return get_route_sensitive_columns(
-            database_id=database_id, params=params, current_user=current_user
-        )
-
-
-@api.route("/test_database_connection/<int:database_id>")
+@api.route("/<int:database_id>/test_database_connection")
 class TestDatabaseConnection(Resource):
     @api.doc("Test database connection")
     @api.response(200, "database_connected", _default_message_response)
