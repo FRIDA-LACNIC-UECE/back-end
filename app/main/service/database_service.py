@@ -82,15 +82,20 @@ def save_new_database(data: dict[str, str], current_user: User) -> None:
     )
 
     try:
+        password = data.get("password")
+        if not password:
+            raise DefaultException("Input_payload_validation_failed", code=400)
+
         new_database = Database(
             name=name,
             host=host,
             username=username,
             port=port,
-            password=data.get("password"),
+            password=password,
             valid_database=valid_database,
             user=current_user,
         )
+
         db.session.add(new_database)
         db.session.flush()
     except:
@@ -142,6 +147,9 @@ def update_database(database_id: int, current_user: User, data: dict[str, str]) 
     database.username = new_username
     database.port = new_port
     database.password = data.get("password")
+
+    if not data.get("password"):
+        raise DefaultException("Input_payload_validation_failed", code=400)
 
     db.session.commit()
 
@@ -227,6 +235,9 @@ def _validate_database_unique_constraint(
     port: int,
     filters: list = [],
 ) -> None:
+    if not name or not username or not host:
+        raise DefaultException("Input_payload_validation_failed", code=400)
+
     if Database.query.filter(
         and_(
             Database.valid_database_id == valid_database_id,

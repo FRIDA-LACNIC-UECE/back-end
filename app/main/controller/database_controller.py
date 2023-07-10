@@ -64,7 +64,7 @@ class Database(Resource):
     @api.doc("Create a new database")
     @api.expect(_database_post, validate=True)
     @api.response(201, "database_created", _default_message_response)
-    @api.response(400, "Input payload validation failed", _validation_error_response)
+    @api.response(400, "Input_payload_validation_failed", _validation_error_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(409, "database_already_exists", _default_message_response)
     @api.response(500, "database_not_created", _default_message_response)
@@ -95,7 +95,7 @@ class DatabaseById(Resource):
     @api.doc("Update a database")
     @api.expect(_database_put, validate=True)
     @api.response(200, "database_updated", _default_message_response)
-    @api.response(400, "Input payload validation failed", _validation_error_response)
+    @api.response(400, "Input_payload_validation_failed", _validation_error_response)
     @api.response(
         401,
         "token_not_found\ntoken_invalid\nunauthorized_user",
