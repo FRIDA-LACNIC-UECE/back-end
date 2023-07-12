@@ -215,6 +215,7 @@ def encrypt_database_table(database_id: int, table_id: int, current_user: User) 
 
         if database_exists(url=cloud_database_engine.url):
             drop_database(url=cloud_database_engine.url)
+
         create_database(url=cloud_database_engine.url)
 
         # Create client table connection

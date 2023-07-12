@@ -1,5 +1,6 @@
 import os
 
+from sqlalchemy_utils import create_database, database_exists, drop_database
 from werkzeug.exceptions import HTTPException
 
 from app import api
@@ -49,6 +50,24 @@ def create_db():
 
         if env_name in ["dev", "staging"]:
             create_seed(env_name=env_name)
+
+
+@app.cli.command("reset_db")
+def create_db():
+    if database_exists(url=db.engine.url):
+        drop_database(url=db.engine.url)
+
+    create_database(url=db.engine.url)
+
+    db.drop_all()
+    db.create_all()
+    db.session.commit()
+
+    create_default_valid_database()
+    create_default_anonymization_type()
+
+    if env_name in ["dev", "staging"]:
+        create_seed(env_name=env_name)
 
 
 @app.cli.command("seeder_db")
