@@ -64,6 +64,41 @@ def login(data: Dict[str, any]) -> tuple[str, User]:
     return (token, user)
 
 
+def token_required(admin_privileges_required=False, return_user=True):
+    def wrapper(f):
+        @wraps(f)
+        def decorator(*args, **kwargs):
+            token = None
+
+            if "Authorization" in request.headers:
+                token = request.headers.get("Authorization")
+                token = token.replace("Bearer ", "")
+
+            if not token:
+                raise DefaultException("token_not_found", code=401)
+
+            try:
+                data = jwt.decode(token, _secret_key, algorithms=["HS256"])
+                current_user = User.query.get(data.get("id"))
+            except:
+                raise DefaultException("token_invalid", code=401)
+
+            if admin_privileges_required:
+                if not current_user.is_admin:
+                    raise DefaultException(
+                        "required_administrator_privileges", code=403
+                    )
+
+            if return_user:
+                return f(current_user=current_user, *args, **kwargs)
+
+            return f(*args, **kwargs)
+
+        return decorator
+
+    return wrapper
+
+
 def jwt_user_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):

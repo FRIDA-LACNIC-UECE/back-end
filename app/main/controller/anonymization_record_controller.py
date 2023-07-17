@@ -5,9 +5,8 @@ from app.main.config import Config
 from app.main.service import (
     delete_anonymization_record_by_id,
     get_anonymization_records,
-    jwt_admin_required,
-    jwt_user_required,
     save_new_anonymization_record,
+    token_required,
     update_anonymization_record,
 )
 from app.main.util import AnonymizationRecordDTO, DefaultResponsesDTO
@@ -46,19 +45,32 @@ class AnonymizationRecord(Resource):
     @api.marshal_with(
         _anonymization_record_list, code=200, description="anonymization_record_list"
     )
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @jwt_admin_required
-    def get(self):
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
+    @token_required()
+    def get(self, current_user) -> tuple[dict[str, any], int]:
         """List all registered anonymization records of each user"""
         params = request.args
-        return get_anonymization_records(params=params)
+        return get_anonymization_records(params=params, current_user=current_user)
 
     @api.doc("Create a new anonymization record")
     @api.expect(_anonymization_record_post, validate=True)
     @api.response(201, "anonymization_record_created", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
-    @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @jwt_user_required
+    @api.response(400, "Input payload validation failed", _validation_error_response)
+    @api.response(
+        404,
+        "database_not_found\nanonymization_type_not_found",
+        _default_message_response,
+    )
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
+    @token_required()
     def post(self, current_user) -> tuple[dict[str, str], int]:
         """Create a new anonymization record"""
         data = request.json
@@ -72,9 +84,13 @@ class AnonymizationRecordById(Resource):
     @api.expect(_anonymization_record_update, validate=True)
     @api.response(200, "anonymization_record_updated", _default_message_response)
     @api.response(400, "Input payload validation failed", _validation_error_response)
-    @api.response(404, "anonymization_record_not_found", _default_message_response)
-    @jwt_user_required
-    def put(self, anonymization_record_id, current_user):
+    @api.response(
+        404,
+        "anonymization_record_not_found\nanonymization_type_not_found",
+        _default_message_response,
+    )
+    @token_required()
+    def put(self, anonymization_record_id, current_user) -> tuple[dict[str, str], int]:
         """Update a anonymization record"""
         data = request.json
         update_anonymization_record(
@@ -87,7 +103,8 @@ class AnonymizationRecordById(Resource):
     @api.doc("Delete a anonymization record")
     @api.response(200, "anonymization_record_deleted", _default_message_response)
     @api.response(404, "anonymization_record_not_found", _default_message_response)
-    @jwt_user_required
+    @api.response(500, "anonymization_record_not_deleted", _default_message_response)
+    @token_required()
     def delete(
         self, anonymization_record_id: int, current_user
     ) -> tuple[dict[str, str], int]:

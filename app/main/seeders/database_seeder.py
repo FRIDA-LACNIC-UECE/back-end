@@ -3,7 +3,6 @@ from app.main.model import Database
 
 
 def add_database(env_name: str):
-
     if env_name == "dev":
         database_test = Database(
             user_id=2,
@@ -25,7 +24,6 @@ def add_database(env_name: str):
             password="",
         )
     db.session.add(database_test)
-    db.session.flush()
 
     new_database = Database(
         user_id=2,
@@ -37,7 +35,6 @@ def add_database(env_name: str):
         password="senha123",
     )
     db.session.add(new_database)
-    db.session.flush()
 
     new_database = Database(
         user_id=2,
@@ -49,7 +46,6 @@ def add_database(env_name: str):
         password="senha123",
     )
     db.session.add(new_database)
-    db.session.flush()
 
     new_database = Database(
         user_id=3,
@@ -61,7 +57,6 @@ def add_database(env_name: str):
         password="senha123",
     )
     db.session.add(new_database)
-    db.session.flush()
 
     new_database = Database(
         user_id=3,
@@ -73,4 +68,5 @@ def add_database(env_name: str):
         password="senha123",
     )
     db.session.add(new_database)
+
     db.session.flush()

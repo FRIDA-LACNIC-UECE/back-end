@@ -27,6 +27,9 @@ class Config:
     CONTENT_PER_PAGE = [10, 20, 30, 50, 100]
     DEFAULT_CONTENT_PER_PAGE = CONTENT_PER_PAGE[0]
 
+    # Batch selection size
+    BATCH_SELECTION_SIZE = 100
+
 
 class DevelopmentConfig(Config):
     mysql_local_base = os.getenv("DATABASE_URL")

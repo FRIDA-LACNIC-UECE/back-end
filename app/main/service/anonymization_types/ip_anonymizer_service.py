@@ -6,11 +6,14 @@ from functools import reduce
 from Crypto.Cipher import AES
 from sqlalchemy import select
 
-from app.main.service.global_service import (
-    create_table_session,
-    get_index_column_table_object,
-    get_primary_key,
-)
+from app.main.config import app_config
+from app.main.service.global_service import TableConnection, get_primary_key_name
+
+_batch_selection_size = app_config.BATCH_SELECTION_SIZE
+
+DATABASE_ID = None
+TABLE_NAME = None
+
 
 if sys.version_info < (3, 3):
     import netaddr
@@ -176,7 +179,6 @@ def anonymization_data(
     """
 
     for number_row in range(len(rows_to_anonymize)):
-
         # Anonymize ip
         for column in columns_to_anonymize:
             rows_to_anonymize[number_row][column] = anonymization_ip(
@@ -187,19 +189,18 @@ def anonymization_data(
 
 
 def anonymization_database_rows(
-    src_client_db_path: str,
-    table_name: str,
+    client_table_connection: TableConnection,
     columns_to_anonymize: list[str],
     rows_to_anonymize: list[dict],
     insert_database: bool = True,
 ) -> list[dict]:
     """
     This function anonymizes each the given rows with the
-    Ip Anonymizer.
+    Ip Cryptopan Anonymizer.
 
     Parameters
     ----------
-    src_client_db_path : str
+    database_url : str
         Connection URI of Client Database.
 
     table_name : str
@@ -221,19 +222,9 @@ def anonymization_database_rows(
     """
 
     # Get primary key column name of Client Database
-    primary_key_name = get_primary_key(
-        database_url=src_client_db_path, table_name=table_name
-    )
-
-    # Create table object of Client Database and
-    # session of Client Database to run sql operations
-    table_client_db, session_client_db = create_table_session(
-        database_url=src_client_db_path, table_name=table_name
-    )
-
-    index_primary_key = get_index_column_table_object(
-        table_object=table_client_db,
-        column_name=primary_key_name,
+    primary_key_name = get_primary_key_name(
+        database_url=client_table_connection.engine.url,
+        table_name=client_table_connection.table_name,
     )
 
     # Run anonymization
@@ -245,28 +236,28 @@ def anonymization_database_rows(
     # Insert anonymized rows in database
     if insert_database:
         for anonymized_row in anonymized_rows:
-            session_client_db.query(table_client_db).filter(
-                table_client_db.c[index_primary_key]
+            client_table_connection.session.query(client_table_connection.table).filter(
+                client_table_connection.get_column(column_name=primary_key_name)
                 == anonymized_row[f"{primary_key_name}"]
             ).update({key: anonymized_row[key] for key in columns_to_anonymize})
 
-        session_client_db.commit()
-
-    session_client_db.close()
+        client_table_connection.session.flush()
 
     return anonymized_rows
 
 
 def anonymization_database(
-    src_client_db_path: str, table_name: str, columns_to_anonymize: list[str]
-) -> int:
+    database_id,
+    client_table_connection: TableConnection,
+    columns_to_anonymize: list[str],
+) -> None:
     """
-    This function anonymizes all database rows from all tables with the
-    Ip Anonymizer.
+    This function anonymizes a table with the
+    Ip Cryptopan Anonymizer.
 
     Parameters
     ----------
-    src_client_db_path : str
+    database_url : str
         Connection URI of Client Database
 
     table_name : str
@@ -277,33 +268,24 @@ def anonymization_database(
 
     Returns
     -------
-    int
-        200 (Success code)
+    None
     """
 
+    DATABASE_ID = database_id
+    TABLE_NAME = client_table_connection.table_name
+
     # Get primary key column name of Client Database
-    primary_key_name = get_primary_key(
-        database_url=src_client_db_path, table_name=table_name
+    primary_key_name = get_primary_key_name(
+        database_url=client_table_connection.engine.url,
+        table_name=client_table_connection.table_name,
     )
 
-    # Create table object of Client Database and
-    # session of Client Database to run sql operations
-    table_client_db, session_client_db = create_table_session(
-        database_url=src_client_db_path, table_name=table_name
+    # Get rows on batch for anonymization
+    results_proxy = client_table_connection.session.execute(
+        select(client_table_connection.table)
     )
 
-    index_primary_key = get_index_column_table_object(
-        table_object=table_client_db,
-        column_name=primary_key_name,
-    )
-
-    # Get rows on batch  for anonymization
-    size = 1000
-    statement = select(table_client_db)
-    results_proxy = session_client_db.execute(
-        statement  # Proxy to get rows on batch  for anonymization
-    )
-    results = results_proxy.fetchmany(size)  # Getting rows for anonymization
+    results = results_proxy.fetchmany(_batch_selection_size)  # Getting rows database
 
     while results:
         # Transform rows from tuples to dictionary
@@ -317,16 +299,12 @@ def anonymization_database(
 
         # Insert anonymized rows in database
         for anonymized_row in anonymized_rows:
-            session_client_db.query(table_client_db).filter(
-                table_client_db.c[index_primary_key]
+            client_table_connection.session.query(client_table_connection.table).filter(
+                client_table_connection.get_column(column_name=primary_key_name)
                 == anonymized_row[f"{primary_key_name}"]
             ).update({key: anonymized_row[key] for key in columns_to_anonymize})
 
-        session_client_db.commit()
+        client_table_connection.session.flush()
 
         # Getting rows for anonymization
-        results = results_proxy.fetchmany(size)
-
-    session_client_db.close()
-
-    return 200
+        results = results_proxy.fetchmany(_batch_selection_size)

@@ -1,4 +1,4 @@
-"""'import anonypy
+import anonypy
 import pandas as pd
 from service.database_service import create_table_session, get_primary_key
 
@@ -6,7 +6,6 @@ from service.database_service import create_table_session, get_primary_key
 def anonymization_database_rows(
     src_client_db_path, table_name, columns_to_anonymization, rows_to_anonymization
 ):
-
     # Get primary key of Client Database
     primary_key = get_primary_key(src_client_db_path, table_name)
 
@@ -41,7 +40,6 @@ def anonymization_database_rows(
     anonymization_dataframe = pd.DataFrame()
 
     for column in columns_to_anonymization:
-
         from_anonymization_dataframe = []
 
         p = anonypy.Preserver(dataframe_to_anonymization, [str(column)], str(column))
@@ -73,7 +71,6 @@ def anonymization_database_rows(
 
 
 def anonymization_database(src_client_db_path, table_name, columns_to_anonymization):
-
     # Get primary key of Client Database
     primary_key = get_primary_key(src_client_db_path, table_name)
 
@@ -111,7 +108,6 @@ def anonymization_database(src_client_db_path, table_name, columns_to_anonymizat
     anonymization_dataframe = pd.DataFrame()
 
     for column in columns_to_anonymization:
-
         from_anonymization_dataframe = []
 
         p = anonypy.Preserver(dataframe_to_anonymization, [str(column)], str(column))
@@ -140,4 +136,3 @@ def anonymization_database(src_client_db_path, table_name, columns_to_anonymizat
 
     session_client_db.commit()
     session_client_db.close()
-"""

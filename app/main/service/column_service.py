@@ -6,9 +6,13 @@ from werkzeug.datastructures import ImmutableMultiDict
 from app.main import db
 from app.main.config import Config
 from app.main.exceptions import DefaultException
-from app.main.model import Column, Table, User
-from app.main.service.database_service import get_database
-from app.main.service.global_service import get_primary_key
+from app.main.model import Column, Database, Table, User
+from app.main.service.anonymization_type_service import get_anonymization_type
+from app.main.service.database_service import (
+    get_database,
+    get_database_columns_names_by_url,
+    get_database_columns_types,
+)
 from app.main.service.table_service import get_table
 
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
@@ -17,25 +21,17 @@ _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
 def get_columns(
     params: ImmutableMultiDict, database_id: int, table_id: int, current_user: User
 ) -> dict:
-    database = get_database(database_id=database_id)
-    table = get_table(
-        table_id=table_id, database_id=database_id, current_user=current_user
-    )
+    get_table(table_id=table_id, database_id=database_id, current_user=current_user)
+
     page = params.get("page", type=int, default=1)
     per_page = params.get("per_page", type=int, default=_DEFAULT_CONTENT_PER_PAGE)
     name = params.get("column_name", type=str)
     anonymization_type_id = params.get("anonymization_type_id", type=int)
 
-    if database.user_id != current_user.id:
-        raise DefaultException("unauthorized_user", code=401)
-
     filters = [Column.table_id == table_id]
 
     if name:
         filters.append(Column.name.ilike(f"%{name}%"))
-
-    if table_id:
-        filters.append(Column.table_id == table_id)
 
     if anonymization_type_id:
         filters.append(Column.anonimyzation_type_id == anonymization_type_id)
@@ -54,39 +50,54 @@ def get_columns(
     }
 
 
+def get_column_by_id(
+    column_id: int, database_id: int, table_id: int, current_user: User
+):
+    return get_column(
+        column_id=column_id,
+        database_id=database_id,
+        table_id=table_id,
+        current_user=current_user,
+    )
+
+
 def save_new_column(
     data: dict, database_id: int, table_id: int, current_user: User
 ) -> None:
-    database = get_database(database_id=database_id)
+    database = get_database(database_id=database_id, current_user=current_user)
     table = get_table(
         table_id=table_id, database_id=database_id, current_user=current_user
     )
-    anonymization_type_id = data.get("anonymization_type_id")
-    type = data.get("type")
+    anonymization_type = get_anonymization_type(
+        anonymization_type_id=data.get("anonymization_type_id")
+    )
     name = data.get("name")
 
-    if database.user_id != current_user.id:
-        raise DefaultException("unauthorized_user", code=401)
-
     _validate_column_unique_constraint(
-        column_name=name, database_id=database_id, table_id=table_id
-    )
-
-    new_Column = Column(
+        column_name=name,
+        database=database,
         table=table,
-        anonymization_type_id=anonymization_type_id,
-        name=name,
-        type=type,
     )
-    db.session.add(new_Column)
 
+    column_type = _get_column_type(
+        database_id=database_id, table_name=table.name, column_name=name
+    )
+
+    new_column = Column(
+        name=name,
+        type=column_type,
+        anonymization_type=anonymization_type,
+        table=table,
+    )
+
+    db.session.add(new_column)
     db.session.commit()
 
 
 def update_column(
     column_id: int,
-    table_id: int,
     database_id: int,
+    table_id: int,
     data: dict[str, str],
     current_user: User,
 ) -> None:
@@ -97,18 +108,32 @@ def update_column(
         current_user=current_user,
     )
 
-    name = data.get("name")
-    anonimyzation_type_id = data.get("anonimyzation_type_id")
+    database = get_database(database_id=database_id, current_user=current_user)
+    table = get_table(
+        table_id=table_id, database_id=database_id, current_user=current_user
+    )
 
-    if column.name != name:
+    new_name = data.get("name")
+    new_anonimyzation_type = get_anonymization_type(
+        anonymization_type_id=data.get("anonymization_type_id")
+    )
+
+    if column.name != new_name:
         _validate_column_unique_constraint(
-            column_name=name,
-            database_id=database_id,
-            table_id=table_id,
+            column_name=new_name,
+            database=database,
+            table=table,
             filters=[Column.id != column_id],
         )
-        column.name = name
-        column.anonimyzation_type_id = anonimyzation_type_id
+
+        column.name = new_name
+
+    column_type = _get_column_type(
+        database_id=database_id, table_name=table.name, column_name=new_name
+    )
+
+    column.type = column_type
+    column.anonimyzation_type = new_anonimyzation_type
 
     db.session.commit()
 
@@ -116,11 +141,6 @@ def update_column(
 def delete_column(
     column_id: int, table_id: int, database_id: int, current_user: User
 ) -> None:
-    database = get_database(database_id=database_id)
-
-    if database.user_id != current_user.id:
-        raise DefaultException("unauthorized_user", code=401)
-
     column = get_column(
         column_id=column_id,
         table_id=table_id,
@@ -132,17 +152,6 @@ def delete_column(
     db.session.commit()
 
 
-def get_column_by_id(
-    column_id: int, table_id: int, database_id: int, current_user: User
-):
-    return get_column(
-        column_id=column_id,
-        table_id=table_id,
-        database_id=database_id,
-        current_user=current_user,
-    )
-
-
 def get_column(
     column_id: int,
     table_id: int,
@@ -150,10 +159,7 @@ def get_column(
     current_user: User,
     options: list = None,
 ) -> Column:
-    database = get_database(database_id=database_id)
-
-    if database.user_id != current_user.id:
-        raise DefaultException("unauthorized_user", code=401)
+    get_table(database_id=database_id, current_user=current_user)
 
     query = Column.query
 
@@ -170,14 +176,32 @@ def get_column(
     return column
 
 
+def _get_column_type(database_id: int, table_name: str, column_name: str) -> str:
+    columns_types = get_database_columns_types(
+        database_id=database_id, table_name=table_name
+    )
+
+    return columns_types[f"{column_name}"]
+
+
 def _validate_column_unique_constraint(
-    column_name: str, database_id: int, table_id: int, filters: list = []
+    column_name: str,
+    database: Database,
+    table: Table,
+    filters: list = [],
 ):
+    database_columns_names = get_database_columns_names_by_url(
+        database_url=database.url, table_name=table.name
+    )["column_names"]
+
+    if not column_name in database_columns_names:
+        raise DefaultException("column_not_exists_on_client_database", code=409)
+
     if (
         Column.query.join(Table)
         .filter(
-            Table.database_id == database_id,
-            Table.id == table_id,
+            Table.database_id == database.id,
+            Table.id == table.id,
             Column.name == column_name,
             *filters,
         )

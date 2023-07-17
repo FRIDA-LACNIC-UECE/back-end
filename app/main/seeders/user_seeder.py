@@ -8,7 +8,7 @@ def add_user():
     admin_user = User(
         username="admin",
         email="admin@example.com",
-        password=generate_password_hash("admin123"),
+        password=generate_password_hash("Admin@123"),
         is_admin=1,
         status="active",
     )
@@ -19,7 +19,7 @@ def add_user():
     new_user = User(
         username="convidado",
         email="convidado@example.com",
-        password=generate_password_hash("convidado123"),
+        password=generate_password_hash("Convidado@123"),
         is_admin=0,
         status="active",
     )
@@ -30,7 +30,7 @@ def add_user():
     new_user = User(
         username="convidado2",
         email="convidado2@example.com",
-        password=generate_password_hash("convidado2123"),
+        password=generate_password_hash("Convidado@2123"),
         is_admin=0,
     )
 

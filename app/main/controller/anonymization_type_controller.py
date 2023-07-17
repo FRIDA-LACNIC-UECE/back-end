@@ -1,17 +1,16 @@
 from flask import request
 from flask_restx import Resource
 
-from ..config import Config
-from ..service import (
+from app.main.config import Config
+from app.main.service import (
     delete_anonymization_type,
     get_anonymization_type_by_id,
     get_anonymization_types,
-    jwt_admin_required,
-    jwt_user_required,
     save_new_anonymization_type,
+    token_required,
     update_anonymization_type,
 )
-from ..util import AnonymizationTypeDTO, DefaultResponsesDTO
+from app.main.util import AnonymizationTypeDTO, DefaultResponsesDTO
 
 anonymization_type_ns = AnonymizationTypeDTO.api
 api = anonymization_type_ns
@@ -47,8 +46,8 @@ class AnonymizationType(Resource):
         _anonymization_type_list, code=200, description="anonymization_types_list"
     )
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @jwt_user_required
-    def get(self, current_user):
+    @token_required(return_user=False)
+    def get(self) -> tuple[dict[str, any], int]:
         """List all registered anonymization types"""
         params = request.args
         return get_anonymization_types(params=params)
@@ -56,13 +55,13 @@ class AnonymizationType(Resource):
     @api.doc("Create a new anonymization type")
     @api.expect(_anonymization_type_post, validate=True)
     @api.response(201, "anonymization_type_created", _default_message_response)
-    @api.response(400, "Input payload validation failed", _default_message_response)
+    @api.response(400, "Input payload validation failed", _validation_error_response)
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(409, "anonymization_type_exists", _default_message_response)
-    @jwt_admin_required
+    @token_required(admin_privileges_required=True, return_user=False)
     def post(self) -> tuple[dict[str, str], int]:
-        """Create a new valid database"""
+        """Create a new anonymization type"""
         data = request.json
         save_new_anonymization_type(data=data)
         return {"message": "anonymization_type_created"}, 201
@@ -75,10 +74,9 @@ class ValidDatabaseById(Resource):
         _anonymization_type_response, code=200, description="anonymization_type_info"
     )
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
-    @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "anonymization_type_not_found", _default_message_response)
-    @jwt_admin_required
-    def get(self, anonymization_type_id: int):
+    @token_required(return_user=False)
+    def get(self, anonymization_type_id: int) -> tuple[dict[str, any]]:
         """Get anonymization type by id"""
         return get_anonymization_type_by_id(anonymization_type_id=anonymization_type_id)
 
@@ -90,8 +88,8 @@ class ValidDatabaseById(Resource):
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "anonymization_type_not_found", _default_message_response)
     @api.response(409, "anonymization_type_already_exists", _default_message_response)
-    @jwt_admin_required
-    def put(self, anonymization_type_id):
+    @token_required(admin_privileges_required=True, return_user=False)
+    def put(self, anonymization_type_id) -> tuple[dict[str, str], int]:
         """Update a anonymization type"""
         data = request.json
         update_anonymization_type(
@@ -104,7 +102,7 @@ class ValidDatabaseById(Resource):
     @api.response(401, "token_not_found\ntoken_invalid", _default_message_response)
     @api.response(403, "required_administrator_privileges", _default_message_response)
     @api.response(404, "anonymization_type_not_found", _default_message_response)
-    @jwt_admin_required
+    @token_required(admin_privileges_required=True, return_user=False)
     def delete(self, anonymization_type_id: int) -> tuple[dict[str, str], int]:
         """Delete a anonymization type"""
         delete_anonymization_type(anonymization_type_id=anonymization_type_id)

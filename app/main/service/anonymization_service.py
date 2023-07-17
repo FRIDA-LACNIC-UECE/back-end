@@ -1,8 +1,7 @@
-from sqlalchemy import create_engine
-from sqlalchemy_utils import database_exists
-
-from app.main.exceptions import DefaultException, ValidationException
-from app.main.model import AnonymizationRecord, AnonymizationType, User
+from app.main import db
+from app.main.exceptions import DefaultException
+from app.main.model import AnonymizationRecord, User
+from app.main.service.anonymization_type_service import get_anonymization_type
 from app.main.service.anonymization_types import (
     cpf_anonymizer_service,
     date_anonymizer_service,
@@ -11,229 +10,149 @@ from app.main.service.anonymization_types import (
     named_entities_anonymizer_service,
     rg_anonymizer_service,
 )
-from app.main.service.database_service import get_database, get_database_url
+from app.main.service.database_service import get_database, get_database_tables_names
+from app.main.service.global_service import create_table_connection
 from app.main.service.sse_service import generate_hash_column
+from app.main.service.table_service import get_table
 
 
 def anonymization_database_rows(
-    database_id: int, data: dict[str, str], current_user: User
+    database_id: int, table_id: int, data: dict[str, str], current_user: User
 ) -> dict:
-
-    table_name = data.get("table_name")
     rows_to_anonymization = data.get("rows_to_anonymization")
     insert_database = data.get("insert_database")
 
-    client_database = get_database(database_id=database_id)
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
 
-    if client_database.user_id != current_user.id:
-        raise DefaultException("unauthorized_user", code=401)
+    client_database = get_database(
+        database_id=database_id, current_user=current_user, verify_connection=True
+    )
 
-    client_database_url = get_database_url(database_id=database_id)
+    database_tables_names = get_database_tables_names(
+        database_id=database_id, current_user=current_user
+    )
 
-    # Get chosen columns
-    anonymization_records = AnonymizationRecord.query.filter_by(
-        database_id=database_id, table=table_name
-    ).all()
+    if not table.name in database_tables_names["table_names"]:
+        raise DefaultException("outdated_table", code=409)
+
+    # Create client table connection
+    client_table_connection = create_table_connection(
+        database_url=client_database.url, table_name=table.name
+    )
+
+    # Get sensitive columns
+    anonymization_records = AnonymizationRecord.query.filter_by(table_id=table.id).all()
 
     if not anonymization_records:
-        raise ValidationException(
-            errors={"anonymization_record": "anonymization_record_invalid_data"},
-            message="Input payload validation failed",
-        )
+        raise DefaultException("anonymization_record_not_found", code=404)
 
     # Run anonymization for each anonymization types
-    for anonymization_record in anonymization_records:
+    try:
+        for anonymization_record in anonymization_records:
+            if not anonymization_record.columns:
+                continue
 
-        # Get anonymization type name by id
-        anonymization_type_name = (
-            AnonymizationType.query.filter_by(
-                id=anonymization_record.anonymization_type_id
+            anonymization_type = get_anonymization_type(
+                anonymization_type_id=anonymization_record.anonymization_type_id
             )
-            .first()
-            .name
-        )
 
-        if not anonymization_record.columns:
-            continue
-
-        # Run anonymization
-        if anonymization_type_name == "named_entities_anonymizer":
-            named_entities_anonymizer_service.anonymization_database_rows(
-                src_client_db_path=client_database_url,
-                table_name=table_name,
-                columns_to_anonymize=anonymization_record.columns,
-                rows_to_anonymize=rows_to_anonymization,
-                insert_database=insert_database,
+            eval(
+                f"{anonymization_type.name}_service.anonymization_database_rows(\
+                    client_table_connection=client_table_connection,\
+                    columns_to_anonymize=anonymization_record.columns,\
+                    rows_to_anonymize=rows_to_anonymization,\
+                    insert_database=insert_database,\
+                    )"
             )
-            # print("\n named_entities_anonymizer anonimizando\n")
+    except:
+        client_table_connection.session.rollback()
+        raise DefaultException("database_rows_not_anonymized", code=500)
 
-        elif anonymization_type_name == "date_anonymizer":
-            date_anonymizer_service.anonymization_database_rows(
-                src_client_db_path=client_database_url,
-                table_name=table_name,
-                columns_to_anonymize=anonymization_record.columns,
-                rows_to_anonymize=rows_to_anonymization,
-                insert_database=insert_database,
-            )
-            # print("\n date_anonymizer anonimizando\n")
-
-        elif anonymization_type_name == "email_anonymizer":
-            email_anonymizer_service.anonymization_database_rows(
-                src_client_db_path=client_database_url,
-                table_name=table_name,
-                columns_to_anonymize=anonymization_record.columns,
-                rows_to_anonymize=rows_to_anonymization,
-                insert_database=insert_database,
-            )
-            # print("\n email_anonymizer anonimizando\n")
-
-        elif anonymization_type_name == "ip_anonymizer":
-            ip_anonymizer_service.anonymization_database_rows(
-                src_client_db_path=client_database_url,
-                table_name=table_name,
-                columns_to_anonymize=anonymization_record.columns,
-                rows_to_anonymize=rows_to_anonymization,
-                insert_database=insert_database,
-            )
-            # print("\n ip_anonymizer anonimizando\n")
-
-        elif anonymization_type_name == "rg_anonymizer":
-            rg_anonymizer_service.anonymization_database_rows(
-                src_client_db_path=client_database_url,
-                table_name=table_name,
-                columns_to_anonymize=anonymization_record.columns,
-                rows_to_anonymize=rows_to_anonymization,
-                insert_database=insert_database,
-            )
-            # print("\n rg_anonymizer anonimizando\n")
-
-        elif anonymization_type_name == "cpf_anonymizer":
-            cpf_anonymizer_service.anonymization_database_rows(
-                src_client_db_path=client_database_url,
-                table_name=table_name,
-                columns_to_anonymize=anonymization_record.columns,
-                rows_to_anonymize=rows_to_anonymization,
-                insert_database=insert_database,
-            )
-            # print("\n cpf_anonymizer anonimizando\n")
-
-        else:
-            pass
+    finally:
+        client_table_connection.close()
 
     return {"rows_anonymized": rows_to_anonymization}
 
 
-def anonymization_table(database_url: str, database_id: int, table_name: str) -> int:
+def anonymization_table(database_id: int, table_id: int, current_user: User) -> int:
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
 
-    # Get chosen columns
-    anonymization_records = AnonymizationRecord.query.filter_by(
-        database_id=database_id, table=table_name
-    ).all()
+    client_database = get_database(
+        database_id=database_id, current_user=current_user, verify_connection=True
+    )
+
+    database_tables_names = get_database_tables_names(
+        database_id=database_id, current_user=current_user
+    )
+
+    if not table.name in database_tables_names["table_names"]:
+        raise DefaultException("outdated_table", code=409)
+
+    client_table_connection = create_table_connection(
+        database_url=client_database.url, table_name=table.name
+    )
+
+    anonymization_records = AnonymizationRecord.query.filter_by(table_id=table.id).all()
 
     if not anonymization_records:
-        raise ValidationException(
-            errors={"anonymization_record": "anonymization_record_invalid_data"},
-            message="Input payload validation failed",
+        raise DefaultException("anonymization_record_not_found", code=404)
+
+    try:
+        for index, anonymization_record in enumerate(anonymization_records):
+            if not anonymization_record.columns:
+                continue
+
+            anonymization_type = get_anonymization_type(
+                anonymization_type_id=anonymization_record.anonymization_type_id
+            )
+
+            eval(
+                f"{anonymization_type.name}_service.anonymization_database(\
+                database_id=client_database.id,\
+                client_table_connection=client_table_connection,\
+                columns_to_anonymize=anonymization_record.columns,\
+                )"
+            )
+
+            table.anonimyzation_progress = int(
+                ((index + 1) / len(anonymization_records)) * 50
+            )
+            db.session.commit()
+
+        table.anonimyzation_progress = 50
+        db.session.commit()
+
+        cloud_table_connection = generate_hash_column(
+            client_database_id=client_database.id,
+            client_database_url=client_database.url,
+            table=table,
         )
 
-    # Run anonymization for each anonymization types
-    for anonymization_record in anonymization_records:
+        client_table_connection.session.commit()
+        cloud_table_connection.session.commit()
+        table.anonimyzation_progress = 100
 
-        # Get anonymization type name by id
-        anonymization_type_name = (
-            AnonymizationType.query.filter_by(
-                id=anonymization_record.anonymization_type_id
-            )
-            .first()
-            .name
-        )
+    except:
+        client_table_connection.session.rollback()
+        cloud_table_connection.session.rollback()
+        table.anonimyzation_progress = 0
+        raise DefaultException("table_not_anonymized", code=500)
 
-        if not anonymization_record.columns:
-            continue
-
-        # Run anonymization
-        if anonymization_type_name == "named_entities_anonymizer":
-            named_entities_anonymizer_service.anonymization_database(
-                src_client_db_path=database_url,
-                table_name=anonymization_record.table,
-                columns_to_anonymize=anonymization_record.columns,
-            )
-            # print("\n\n name_entities_anonymizer anonimizando\n\n")
-
-        elif anonymization_type_name == "date_anonymizer":
-            date_anonymizer_service.anonymization_database(
-                src_client_db_path=database_url,
-                table_name=anonymization_record.table,
-                columns_to_anonymize=anonymization_record.columns,
-            )
-            # print("\n\n date_anonymizer anonimizando\n\n")
-
-        elif anonymization_type_name == "email_anonymizer":
-            email_anonymizer_service.anonymization_database(
-                src_client_db_path=database_url,
-                table_name=anonymization_record.table,
-                columns_to_anonymize=anonymization_record.columns,
-            )
-            # print("\n\n email_anonymizer anonimizando\n\n")
-
-        elif anonymization_type_name == "ip_anonymizer":
-            ip_anonymizer_service.anonymization_database(
-                src_client_db_path=database_url,
-                table_name=anonymization_record.table,
-                columns_to_anonymize=anonymization_record.columns,
-            )
-            # print("\n\n ip_anonymizer anonimizando\n\n")
-
-        elif anonymization_type_name == "rg_anonymizer":
-            rg_anonymizer_service.anonymization_database(
-                src_client_db_path=database_url,
-                table_name=anonymization_record.table,
-                columns_to_anonymize=anonymization_record.columns,
-            )
-            # print("\n\n rg_anonymizer anonimizando\n\n")
-
-        elif anonymization_type_name == "cpf_anonymizer":
-            cpf_anonymizer_service.anonymization_database(
-                src_client_db_path=database_url,
-                table_name=anonymization_record.table,
-                columns_to_anonymize=anonymization_record.columns,
-            )
-            # print("\n\n cpf_anonymizer anonimizando\n\n")
-
-        else:
-            return 400
-
-    return 200
+    finally:
+        client_table_connection.close()
+        cloud_table_connection.close()
+        db.session.commit()
 
 
-def anonymization_database(
-    database_id: int,
-    data: dict[str, str],
-    current_user: User,
+def get_anonymization_progress(
+    database_id: int, table_id: int, current_user: User
 ) -> None:
-
-    table_name = data.get("table_name")
-
-    client_database = get_database(database_id=database_id)
-
-    if client_database.user_id != current_user.id:
-        raise DefaultException("unauthorized_user", code=401)
-
-    client_database_url = get_database_url(database_id=database_id)
-
-    # Check connection with database found
-    engine_client_db = create_engine(client_database_url)
-    if not database_exists(engine_client_db.url):
-        raise DefaultException("database_not_conected", code=409)
-
-    anonymization_table(
-        database_url=client_database_url,
-        database_id=database_id,
-        table_name=table_name,
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
     )
 
-    generate_hash_column(
-        user_id=current_user.id,
-        database_id=database_id,
-        table_name=table_name,
-    )
+    return {"progress": table.anonimyzation_progress}
