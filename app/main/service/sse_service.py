@@ -33,7 +33,6 @@ def update_hash_column(
     primary_key_data: list,
     raw_data: list,
 ):
-    print("update_hash_column: \n\n")
     for primary_key_value, row in zip(primary_key_data, range(raw_data.shape[0])):
         record = raw_data.iloc[row].values
         record = list(record)

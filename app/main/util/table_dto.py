@@ -22,6 +22,12 @@ class TableDTO:
         )
     }
 
+    table_remove_anonimyzation_progress = {
+        "remove_anonimyzation_progress": fields.Integer(
+            required=True, description="rremove anonimyzation progress", min=0, max=100
+        )
+    }
+
     table_encrypted = {
         "encrypted": fields.Boolean(
             required=True, description="True if table is encrypted"
@@ -51,7 +57,8 @@ class TableDTO:
         | table_encrypted
         | table_encryption_progress
         | table_anonymized
-        | table_anonimyzation_progress,
+        | table_anonimyzation_progress
+        | table_remove_anonimyzation_progress,
     )
 
     table_sensitive_columns = api.model(

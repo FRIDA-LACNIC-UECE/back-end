@@ -21,11 +21,15 @@ class Table(db.Model):
 
     @property
     def encrypted(self):
-        return True if self.encryption_progress == 100 else False
+        return True if self.encryption_progress >= 100 else False
 
     @property
     def anonymized(self):
-        return True if self.anonimyzation_progress == 100 else False
+        return True if self.anonimyzation_progress >= 100 else False
+
+    @property
+    def remove_anonimyzation_progress(self):
+        return 100 - self.anonimyzation_progress
 
     def __repr__(self):
         return f"<Table: {self.id}>"
