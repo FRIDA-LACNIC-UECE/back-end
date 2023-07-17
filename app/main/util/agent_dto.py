@@ -33,12 +33,9 @@ class AgentDTO:
         },
     )
 
-    include_hash_rows = api.model(
-        "include_hash_rows",
+    process_inserts = api.model(
+        "process_inserts",
         {
-            "table_name": fields.String(
-                required=True, description="table name to encryption"
-            ),
             "hash_rows": fields.List(
                 Dictionary(attribute="hash row", description="hash row"),
                 description="hash rows",
@@ -49,7 +46,6 @@ class AgentDTO:
     process_updates = api.model(
         "process_updates",
         {
-            "table_name": fields.String(description="database table name"),
             "primary_key_list": fields.List(
                 fields.Integer(description="primary key value"),
                 description="primary key list",
@@ -60,7 +56,6 @@ class AgentDTO:
     process_deletions = api.model(
         "process_deletions",
         {
-            "table_name": fields.String(description="database table name"),
             "primary_key_list": fields.List(
                 fields.Integer(description="primary key value"),
                 description="primary key list",

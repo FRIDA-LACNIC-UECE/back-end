@@ -45,6 +45,29 @@ def get_table_by_id(table_id: int, database_id: int, current_user: User) -> Tabl
     )
 
 
+def get_table_by_name(
+    table_name: str,
+    database_id: int,
+    current_user: User,
+    options: list = None,
+) -> Table:
+    get_database(database_id=database_id, current_user=current_user)
+
+    query = Table.query
+
+    filters = [Table.name == table_name, Table.database_id == database_id]
+
+    if options is not None:
+        query = query.options(*options)
+
+    table = query.filter(*filters).first()
+
+    if table is None:
+        raise DefaultException("table_not_found", code=404)
+
+    return table
+
+
 def save_new_table(database_id: int, data: dict[str, str], current_user: User) -> None:
     database = get_database(database_id=database_id, current_user=current_user)
     name = data.get("name")
@@ -227,24 +250,19 @@ def get_route_sensitive_columns(
     if not table.name in database_tables_names["table_names"]:
         raise DefaultException("outdated_table", code=409)
 
-    try:
-        anonymization_records = AnonymizationRecord.query.filter(
-            AnonymizationRecord.table_id == table.id,
-        ).all()
+    anonymization_records = AnonymizationRecord.query.filter(
+        AnonymizationRecord.table_id == table.id,
+    ).all()
 
-        if not anonymization_records:
-            raise DefaultException("anonymization_records_not_found", code=404)
+    if not anonymization_records:
+        raise DefaultException("anonymization_records_not_found", code=404)
 
-        sensitive_columns = []
-        for sensitive_column in anonymization_records:
-            if sensitive_column.columns:
-                sensitive_columns += sensitive_column.columns
+    sensitive_columns = []
+    for sensitive_column in anonymization_records:
+        if sensitive_column.columns:
+            sensitive_columns += sensitive_column.columns
 
-        return {"sensitive_column_names": sensitive_columns}
-    except:
-        raise DefaultException(
-            "internal_error_getting_sensitive_column_names", code=500
-        )
+    return {"sensitive_column_names": sensitive_columns}
 
 
 from app.main.service.database_service import get_database, get_database_tables_names

@@ -4,9 +4,16 @@ import rsa
 
 from app.main.model import DatabaseKey
 
+from app.main.exceptions import DefaultException
+
 
 def get_database_keys_by_database_id(database_id: int) -> None:
-    return DatabaseKey.query.filter(DatabaseKey.database_id == database_id).first()
+    database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()
+
+    if not database_keys:
+        raise DefaultException("database_keys_not_found", code=404)
+
+    return database_keys
 
 
 def generate_keys():

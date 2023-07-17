@@ -69,7 +69,8 @@ class DatabaseDTO:
                 api.model(
                     "database_response_valid_database",
                     ValidDatabaseDTO.valid_database_id
-                    | ValidDatabaseDTO.valid_database_name,
+                    | ValidDatabaseDTO.valid_database_name
+                    | ValidDatabaseDTO.valid_database_dialect,
                 ),
                 description="valid database info",
             ),

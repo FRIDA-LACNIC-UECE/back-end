@@ -92,24 +92,32 @@ def insert_data(engine_db, table_name, num_of_rows, seed):
     session_db.commit()
 
 
-def create_test_frida_db(USER, DB_PW, HOST, DB_NAME):
+def create_test_database(USER, DB_PW, HOST, DB_NAME):
     if not database_exists(
-        "mysql://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, DB_NAME)
-    ):
-        create_database("mysql://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, DB_NAME))
-
-    if not database_exists(
-        "mysql://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, f"{DB_NAME}_backup")
+        "mysql+mysqlconnector://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, DB_NAME)
     ):
         create_database(
-            "mysql://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, f"{DB_NAME}_backup")
+            "mysql+mysqlconnector://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, DB_NAME)
+        )
+
+    if not database_exists(
+        "mysql+mysqlconnector://{}:{}@{}:3306/{}".format(
+            USER, DB_PW, HOST, f"{DB_NAME}_backup"
+        )
+    ):
+        create_database(
+            "mysql+mysqlconnector://{}:{}@{}:3306/{}".format(
+                USER, DB_PW, HOST, f"{DB_NAME}_backup"
+            )
         )
 
     engine_db_test = create_engine(
-        "mysql://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, DB_NAME)
+        "mysql+mysqlconnector://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, DB_NAME)
     )
     engine_db_backup = create_engine(
-        "mysql://{}:{}@{}:3306/{}".format(USER, DB_PW, HOST, f"{DB_NAME}_backup")
+        "mysql+mysqlconnector://{}:{}@{}:3306/{}".format(
+            USER, DB_PW, HOST, f"{DB_NAME}_backup"
+        )
     )
 
     inspector = inspect(engine_db_test)

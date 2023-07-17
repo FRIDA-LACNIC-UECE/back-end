@@ -10,10 +10,9 @@ from app.main.service.global_service import (
     TableConnection,
     create_table_connection,
     get_cloud_database_url,
-    get_database,
     get_primary_key_name,
 )
-from app.main.service.table_service import get_sensitive_columns
+from app.main.service.table_service import get_sensitive_columns, get_table
 
 _batch_selection_size = app_config.BATCH_SELECTION_SIZE
 
@@ -32,11 +31,16 @@ def update_hash_column(
     primary_key_name: str,
     primary_key_data: list,
     raw_data: list,
-):
+) -> None:
     for primary_key_value, row in zip(primary_key_data, range(raw_data.shape[0])):
         record = raw_data.iloc[row].values
         record = list(record)
+
+        for index in range(len(record)):
+            record[index] = str(record[index])
+
         new_record = str(record)
+
         hashed_line = hashlib.sha256(new_record.encode("utf-8")).hexdigest()
 
         statement = (
@@ -50,20 +54,24 @@ def update_hash_column(
 
         cloud_table_connection.session.execute(statement)
 
-    cloud_table_connection.session.flush()
+    cloud_table_connection.session.commit()
 
 
 def generate_hash_rows(
-    database_id: int, table_name: str, result_query: list[dict], current_user: User
-) -> None:
-    get_database(database_id=database_id, current_user=current_user)
+    database_id: int, table_id: int, result_query: list[dict], current_user: User
+) -> TableConnection:
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
 
     # Get primary key name of client database
-    primary_key_name = get_primary_key_name(database_id=database_id)
+    primary_key_name = get_primary_key_name(
+        database_id=database_id, table_name=table.name
+    )
 
     # Get sensitve columns of table
     client_columns_list = [primary_key_name] + get_sensitive_columns(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_id=table.id, current_user=current_user
     )["sensitive_column_names"]
 
     # Get cloud database url
@@ -71,15 +79,11 @@ def generate_hash_rows(
 
     # Create cloud table connection
     cloud_table_connection = create_table_connection(
-        database_url=cloud_database_url, table_name=table_name
+        database_url=cloud_database_url, table_name=table.name
     )
 
-    # Convert result query to list
-    for index in len(result_query):
-        result_query[index] = list(result_query[index])
-
     # Transform query rows to dataframe
-    raw_data = pd.DataFrame(result_query, columns=client_columns_list)
+    raw_data = pd.DataFrame(data=result_query)[client_columns_list]
     primary_key_data = raw_data[primary_key_name]
     raw_data.pop(primary_key_name)
 
@@ -90,12 +94,14 @@ def generate_hash_rows(
         raw_data=raw_data,
     )
 
+    return cloud_table_connection
+
 
 def generate_hash_column(
     client_database_id: int,
     client_database_url: str,
     table: Table,
-) -> None:
+) -> TableConnection:
     # Get primary key name
     primary_key_name = get_primary_key_name(
         database_url=client_database_url, table_name=table.name
@@ -143,9 +149,9 @@ def generate_hash_column(
         from_db = []
 
         for result in results:
-            from_db.append(list(result))
+            from_db.append(dict(result))
 
-        raw_data = pd.DataFrame(from_db, columns=client_columns_list)
+        raw_data = pd.DataFrame(data=from_db)[client_columns_list]
         primary_key_data = raw_data[primary_key_name]
         raw_data.pop(primary_key_name)
 

@@ -40,7 +40,7 @@ class Database(db.Model):
     @property
     def url(self) -> str:
         return "{}://{}:{}@{}:{}/{}".format(
-            self.valid_database.name,
+            self.valid_database.dialect,
             self.username,
             self.password,
             self.host,
