@@ -34,7 +34,7 @@ def get_columns(
         filters.append(Column.name.ilike(f"%{name}%"))
 
     if anonymization_type_id:
-        filters.append(Column.anonimyzation_type_id == anonymization_type_id)
+        filters.append(Column.anonymization_type_id == anonymization_type_id)
 
     pagination = (
         Column.query.filter(*filters)
@@ -114,7 +114,7 @@ def update_column(
     )
 
     new_name = data.get("name")
-    new_anonimyzation_type = get_anonymization_type(
+    new_anonymization_type = get_anonymization_type(
         anonymization_type_id=data.get("anonymization_type_id")
     )
 
@@ -133,7 +133,7 @@ def update_column(
     )
 
     column.type = column_type
-    column.anonimyzation_type = new_anonimyzation_type
+    column.anonymization_type = new_anonymization_type
 
     db.session.commit()
 

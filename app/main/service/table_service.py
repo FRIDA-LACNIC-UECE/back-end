@@ -134,7 +134,7 @@ def _validate_table_unique_constraint(
         raise DefaultException("table_already_exists", code=409)
 
 
-def get_database_columns(
+def get_table_columns(
     database_id: int,
     table_id: int,
     current_user: User,
@@ -160,10 +160,13 @@ def get_database_columns(
         columns_inspector = inspect(engine_database).get_columns(table.name)
 
         table_columns = []
+
         for column in columns_inspector:
             table_columns.append(
                 {"name": str(column["name"]), "type": str(column["type"])}
             )
+
+        engine_database.dispose()
 
         return {"table_columns": table_columns}
     except:

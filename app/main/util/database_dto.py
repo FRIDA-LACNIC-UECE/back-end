@@ -34,7 +34,7 @@ class DatabaseDTO:
     }
 
     database_password = {
-        "password": fields.String(required=True, description="database password"),
+        "password": fields.String(description="database password"),
     }
 
     database_post = api.model(

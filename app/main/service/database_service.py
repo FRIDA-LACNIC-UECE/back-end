@@ -82,16 +82,12 @@ def save_new_database(data: dict[str, str], current_user: User) -> None:
     )
 
     try:
-        password = data.get("password")
-        if not password:
-            raise DefaultException("Input_payload_validation_failed", code=400)
-
         new_database = Database(
             name=name,
             host=host,
             username=username,
             port=port,
-            password=password,
+            password=data.get("password"),
             valid_database=valid_database,
             user=current_user,
         )
@@ -358,7 +354,6 @@ def get_database_columns_types(database_id: int, table_name: str) -> dict[str, s
         return columns
     except:
         raise DefaultException("internal_error_getting_columns_types", code=500)
-
 
 
 def test_database_connection(database_id: int, current_user: User) -> None:

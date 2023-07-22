@@ -16,15 +16,15 @@ class TableDTO:
         )
     }
 
-    table_anonimyzation_progress = {
-        "anonimyzation_progress": fields.Integer(
-            required=True, description="anonimyzation progress", min=0, max=100
+    table_anonymization_progress = {
+        "anonymization_progress": fields.Integer(
+            required=True, description="anonymization progress", min=0, max=100
         )
     }
 
-    table_remove_anonimyzation_progress = {
-        "remove_anonimyzation_progress": fields.Integer(
-            required=True, description="rremove anonimyzation progress", min=0, max=100
+    table_remove_anonymization_progress = {
+        "remove_anonymization_progress": fields.Integer(
+            required=True, description="rremove anonymization progress", min=0, max=100
         )
     }
 
@@ -40,6 +40,18 @@ class TableDTO:
         )
     }
 
+    table_anonymization_status = {
+        "anonymization_status": fields.String(
+            required=True, description="table anonymization status", min_length=1
+        )
+    }
+
+    table_encryption_status = {
+        "encryption_status": fields.String(
+            required=True, description="table encryption status", min_length=1
+        )
+    }
+
     table_post = api.model(
         "table_post",
         table_name,
@@ -50,15 +62,26 @@ class TableDTO:
         table_name,
     )
 
-    table_response = api.model(
-        "table_response",
-        table_id
-        | table_name
-        | table_encrypted
-        | table_encryption_progress
-        | table_anonymized
-        | table_anonimyzation_progress
-        | table_remove_anonimyzation_progress,
+    table_column = api.model(
+        "table_column",
+        {
+            "name": fields.String(
+                required=True, description="column table name", min_length=1
+            ),
+            "type": fields.String(
+                required=True, description="column table type", min_length=1
+            ),
+        },
+    )
+
+    table_columns = api.model(
+        "table_columns",
+        {
+            "table_columns": fields.List(
+                fields.Nested(table_column),
+                description="column name list",
+            ),
+        },
     )
 
     table_sensitive_columns = api.model(
@@ -69,6 +92,19 @@ class TableDTO:
                 description="sensitive column name list",
             ),
         },
+    )
+
+    table_response = api.model(
+        "table_response",
+        table_id
+        | table_name
+        | table_encrypted
+        | table_encryption_progress
+        | table_anonymized
+        | table_anonymization_progress
+        | table_remove_anonymization_progress
+        | table_encryption_status
+        | table_anonymization_status,
     )
 
     table_list = api.model(

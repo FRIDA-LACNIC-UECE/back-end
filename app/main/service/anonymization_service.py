@@ -30,7 +30,7 @@ _batch_selection_size = app_config.BATCH_SELECTION_SIZE
 def _calculate_remove_anonymization_progress(
     table: Table, number_row_selected: int, number_row_total: int
 ) -> None:
-    table.anonimyzation_progress = 100 - int(
+    table.anonymization_progress = 100 - int(
         (number_row_selected / number_row_total) * 100
     )
     db.session.commit()
@@ -138,12 +138,12 @@ def anonymization_table(database_id: int, table_id: int, current_user: User) -> 
                 )"
             )
 
-            table.anonimyzation_progress = int(
+            table.anonymization_progress = int(
                 ((index + 1) / len(anonymization_records)) * 50
             )
             db.session.commit()
 
-        table.anonimyzation_progress = 50
+        table.anonymization_progress = 50
         db.session.commit()
 
         cloud_table_connection = generate_hash_column(
@@ -154,12 +154,12 @@ def anonymization_table(database_id: int, table_id: int, current_user: User) -> 
 
         client_table_connection.session.commit()
         cloud_table_connection.session.commit()
-        table.anonimyzation_progress = 100
+        table.anonymization_progress = 100
 
     except:
         client_table_connection.session.rollback()
         cloud_table_connection.session.rollback()
-        table.anonimyzation_progress = 0
+        table.anonymization_progress = 0
         raise DefaultException("table_not_anonymized", code=500)
 
     finally:
@@ -257,12 +257,12 @@ def remove_table_anonymizaiton(
             results = results_proxy.fetchmany(_batch_selection_size)
 
         table.encryption_progress = 0
-        table.anonimyzation_progress = 0
+        table.anonymization_progress = 0
         client_table_connection.session.commit()
 
     except:
         table.encryption_progress = 100
-        table.anonimyzation_progress = 100
+        table.anonymization_progress = 100
         client_table_connection.session.rollback()
         db.session.rollback()
         raise DefaultException("anonymization_not_removed", code=500)
@@ -279,7 +279,7 @@ def get_anonymization_progress(
         database_id=database_id, table_id=table_id, current_user=current_user
     )
 
-    return {"progress": table.anonimyzation_progress}
+    return {"progress": table.anonymization_progress}
 
 
 def get_remove_anonymization_progress(
@@ -289,4 +289,4 @@ def get_remove_anonymization_progress(
         database_id=database_id, table_id=table_id, current_user=current_user
     )
 
-    return {"progress": table.remove_anonimyzation_progress}
+    return {"progress": table.remove_anonymization_progress}

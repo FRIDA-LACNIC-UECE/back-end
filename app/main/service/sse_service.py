@@ -21,7 +21,7 @@ _batch_selection_size = app_config.BATCH_SELECTION_SIZE
 def _calculate_progress(
     table: Table, number_row_selected: int, number_row_total: int
 ) -> None:
-    table.anonimyzation_progress = (
+    table.anonymization_progress = (
         int((number_row_selected / number_row_total) * 50) + 50
     )
     db.session.commit()

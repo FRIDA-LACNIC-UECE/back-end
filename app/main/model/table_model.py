@@ -10,7 +10,7 @@ class Table(db.Model):
 
     name = db.Column(db.String(100), nullable=False)
     encryption_progress = db.Column(db.Integer, nullable=False, default=0)
-    anonimyzation_progress = db.Column(db.Integer, nullable=False, default=0)
+    anonymization_progress = db.Column(db.Integer, nullable=False, default=0)
     create_at = db.Column(db.DateTime, server_default=func.now())
     update_at = db.Column(db.DateTime, onupdate=func.now())
 
@@ -25,11 +25,25 @@ class Table(db.Model):
 
     @property
     def anonymized(self):
-        return True if self.anonimyzation_progress >= 100 else False
+        return True if self.anonymization_progress >= 100 else False
 
     @property
-    def remove_anonimyzation_progress(self):
-        return 100 - self.anonimyzation_progress
+    def anonymization_status(self):
+        if self.anonymization_progress <= 0:
+            return "not_anonymized"
+        elif self.anonymization_progress >= 100:
+            return "anonymized"
+        else:
+            return "anonymization_in_progress"
+
+    @property
+    def encryption_status(self):
+        if self.encryption_progress <= 0:
+            return "not_encrypted"
+        elif self.encryption_progress >= 100:
+            return "encrypted"
+        else:
+            return "encryption_in_progress"
 
     def __repr__(self):
         return f"<Table: {self.id}>"

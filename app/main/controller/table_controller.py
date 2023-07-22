@@ -10,17 +10,19 @@ from app.main.service import (
     save_new_table,
     token_required,
     update_table,
+    get_route_sensitive_columns,
+    get_table_columns,
 )
 from app.main.util import DatabaseDTO, DefaultResponsesDTO, TableDTO
 
 database_ns = DatabaseDTO.api
 api = database_ns
 
-
 _table_put = TableDTO.table_put
 _table_post = TableDTO.table_post
 _table_response = TableDTO.table_response
 _table_list = TableDTO.table_list
+_table_columns = TableDTO.table_columns
 _table_sensitive_columns = TableDTO.table_sensitive_columns
 
 
@@ -152,6 +154,34 @@ class TableById(Resource):
         return {"message": "table_deleted"}, 200
 
 
+@api.route("/<int:database_id>/table/<int:table_id>/columns")
+class TableColumns(Resource):
+    @api.doc("Get columns names each table")
+    @api.marshal_with(
+        _table_columns,
+        code=200,
+        description="get_database_columns_names",
+    )
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
+    @api.response(404, "database_not_found", _default_message_response)
+    @api.response(
+        409, "database_not_conected\noutdated_table", _default_message_response
+    )
+    @api.response(500, "internal_error_getting_column_names", _default_message_response)
+    @token_required()
+    def get(self, database_id: int, table_id: int, current_user: User):
+        """Get columns names each table"""
+        return get_table_columns(
+            database_id=database_id,
+            table_id=table_id,
+            current_user=current_user,
+        )
+
+
 @api.route("/<int:database_id>/table/<int:table_id>/sensitive_columns")
 class TableSensitiveColumns(Resource):
     @api.doc("Get sensitive columns names each table")
@@ -180,6 +210,3 @@ class TableSensitiveColumns(Resource):
             table_id=table_id,
             current_user=current_user,
         )
-
-
-from app.main.service.table_service import get_route_sensitive_columns

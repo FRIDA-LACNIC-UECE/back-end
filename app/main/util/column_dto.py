@@ -19,7 +19,7 @@ class ColumnDTO:
 
     column_anonymization_type_id = {
         "anonymization_type_id": fields.Integer(
-            description="anonimyzation type id", example=1
+            description="anonymization type id", example=1
         )
     }
 
