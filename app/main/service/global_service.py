@@ -40,7 +40,7 @@ def get_cloud_database_url(database_id: int) -> str:
 
     if env_name == "dev":
         return "{}://{}:{}@{}:{}/{}".format(
-            "mysql",
+            database.valid_database.dialect,
             "root",
             "larces132",
             "localhost",
@@ -49,7 +49,7 @@ def get_cloud_database_url(database_id: int) -> str:
         )
     else:
         return "{}://{}:{}@{}:{}/{}".format(
-            "mysql",
+            database.valid_database.dialect,
             "root",
             "",
             "db",

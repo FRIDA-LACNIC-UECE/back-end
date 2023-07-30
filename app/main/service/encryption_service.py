@@ -9,18 +9,6 @@ from app.main import db
 from app.main.config import app_config
 from app.main.exceptions import DefaultException, ValidationException
 from app.main.model import DatabaseKey, Table, User
-from app.main.service.database_key_service import load_keys
-from app.main.service.database_service import (
-    get_database,
-    get_database_columns_types,
-    get_database_tables_names,
-)
-from app.main.service.global_service import (
-    create_table_connection,
-    get_cloud_database_url,
-    get_primary_key_name,
-)
-from app.main.service.table_service import get_sensitive_columns, get_table
 
 _batch_selection_size = app_config.BATCH_SELECTION_SIZE
 
@@ -97,10 +85,6 @@ def encrypt_database_row(
         database_id=database_id, table_id=table_id, current_user=current_user
     )
 
-    get_database(
-        database_id=database_id, current_user=current_user, verify_connection=True
-    )
-
     database_tables_names = get_database_tables_names(
         database_id=database_id, current_user=current_user
     )
@@ -115,10 +99,7 @@ def encrypt_database_row(
         create_database(url=cloud_database_engine.url)
 
     # Load rsa keys
-    database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()
-
-    if not database_keys:
-        raise DefaultException("database_keys_not_found", code=404)
+    database_keys = get_database_keys_by_database_id(database_id=database_id)
 
     public_key, _ = load_keys(
         publicKeyStr=database_keys.public_key,
@@ -132,7 +113,7 @@ def encrypt_database_row(
 
     # Get column names to encrypt along with primary key name
     columns_list = [primary_key_name] + get_sensitive_columns(
-        database_id=database_id, table_name=table.name
+        database_id=database_id, table_id=table.id
     )["sensitive_column_names"]
 
     # Create cloud table connection
@@ -184,11 +165,13 @@ def encrypt_database_row(
         cloud_table_connection.session.commit()
 
     except:
-        cloud_table_connection.session.rollback()
+        if cloud_table_connection is not None:
+            cloud_table_connection.session.rollback()
         raise DefaultException("database_rows_not_encrypted", code=500)
 
     finally:
-        cloud_table_connection.close()
+        if cloud_table_connection is not None:
+            cloud_table_connection.close()
 
 
 def encrypt_database_table(database_id: int, table_id: int, current_user: User) -> None:
@@ -208,6 +191,9 @@ def encrypt_database_table(database_id: int, table_id: int, current_user: User) 
         raise DefaultException("outdated_table", code=409)
 
     try:
+        client_table_connection = None
+        cloud_database_engine = None
+
         # Create cloud database if not exist
         cloud_database_engine = create_engine(
             url=get_cloud_database_url(database_id=database_id)
@@ -230,14 +216,11 @@ def encrypt_database_table(database_id: int, table_id: int, current_user: User) 
 
         # Get column names to encrypt along with primary key name
         columns_list = [primary_key_name] + get_sensitive_columns(
-            database_id=database_id, table_id=table.id
+            database_id=database_id, table_id=table.id, current_user=current_user
         )["sensitive_column_names"]
 
         # Load rsa keys
-        database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()
-
-        if not database_keys:
-            raise DefaultException("database_keys_not_found", code=404)
+        database_keys = get_database_keys_by_database_id(database_id=database_id)
 
         public_key, _ = load_keys(
             publicKeyStr=database_keys.public_key,
@@ -308,8 +291,12 @@ def encrypt_database_table(database_id: int, table_id: int, current_user: User) 
         raise DefaultException("table_not_encrypted", code=500)
 
     finally:
-        client_table_connection.close()
-        cloud_database_engine.dispose()
+        if client_table_connection is not None:
+            client_table_connection.close()
+
+        if cloud_database_engine is not None:
+            cloud_database_engine.dispose()
+
         db.session.commit()
 
 
@@ -394,7 +381,7 @@ def decrypt_row(
             raise DefaultException("row_not_decrypted", code=500)
 
         # Load rsa keys
-        database_keys = DatabaseKey.query.filter_by(database_id=database_id).first()
+        database_keys = get_database_keys_by_database_id(database_id=database_id)
 
         if not database_keys:
             raise DefaultException("row_not_decrypted", code=500)
@@ -463,3 +450,20 @@ def decrypt_row(
         return dict_result_data
     except:
         raise DefaultException("row_not_decrypted", code=500)
+
+
+from app.main.service.database_key_service import (
+    load_keys,
+    get_database_keys_by_database_id,
+)
+from app.main.service.database_service import (
+    get_database,
+    get_database_columns_types,
+    get_database_tables_names,
+)
+from app.main.service.global_service import (
+    create_table_connection,
+    get_cloud_database_url,
+    get_primary_key_name,
+)
+from app.main.service.table_service import get_sensitive_columns, get_table

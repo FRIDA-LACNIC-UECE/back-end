@@ -21,8 +21,8 @@ authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authoriz
 
 api = Api(
     authorizations=authorizations,
-    title="Frida API",
-    version="1.0",
+    title="SysPAD API",
+    version="1.2.0",
     description="Data protection system based on encryption and anonymization",
     security="apikey",
 )

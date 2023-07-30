@@ -6,7 +6,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY")
     DEBUG = False
-    JWT_EXP = 720
+    JWT_EXP = 8
     ACTIVATION_EXP_SECONDS = 86400
 
     # Remove additional message on 404 responses
@@ -45,7 +45,7 @@ class DevelopmentConfig(Config):
 
 class StagingConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "mysql://root:@db/frida"
+    SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:@db/syspad"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     ENV = "staging"
     HOST = "0.0.0.0"
@@ -67,7 +67,7 @@ class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = mysql_local_base
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     ENV = "production"
-    HOST = "localhost"
+    HOST = "0.0.0.0"
 
 
 config_by_name = dict(

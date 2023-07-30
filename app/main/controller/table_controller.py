@@ -12,6 +12,7 @@ from app.main.service import (
     update_table,
     get_route_sensitive_columns,
     get_table_columns,
+    get_table_by_name,
 )
 from app.main.util import DatabaseDTO, DefaultResponsesDTO, TableDTO
 
@@ -87,10 +88,30 @@ class Table(Resource):
         return {"message": "table_created"}, 201
 
 
+@api.route("/<int:database_id>/table/<string:table_name>")
+class TableByName(Resource):
+    @api.doc("Get table by name")
+    @api.marshal_with(_table_response, code=200, description="table_info_by_names")
+    @api.response(
+        401,
+        "token_not_found\ntoken_invalid\nunauthorized_user",
+        _default_message_response,
+    )
+    @api.response(404, "table_not_found\ndatabase_not_found", _default_message_response)
+    @token_required()
+    def get(
+        self, table_name: str, database_id: int, current_user: User
+    ) -> tuple[dict[str, any], int]:
+        """Get table by name"""
+        return get_table_by_name(
+            table_name=table_name, database_id=database_id, current_user=current_user
+        )
+
+
 @api.route("/<int:database_id>/table/<int:table_id>")
 class TableById(Resource):
     @api.doc("Get table by id")
-    @api.marshal_with(_table_response, code=200, description="table_info")
+    @api.marshal_with(_table_response, code=200, description="table_info_by_id")
     @api.response(
         401,
         "token_not_found\ntoken_invalid\nunauthorized_user",

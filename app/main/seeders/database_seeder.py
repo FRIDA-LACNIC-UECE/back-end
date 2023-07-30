@@ -7,7 +7,7 @@ def add_database(env_name: str):
         database_test = Database(
             user_id=2,
             valid_database_id=1,
-            name="test_frida_db",
+            name="syspad_test_database",
             username="root",
             host="localhost",
             port=3306,
@@ -17,7 +17,7 @@ def add_database(env_name: str):
         database_test = Database(
             user_id=2,
             valid_database_id=1,
-            name="test_frida_db",
+            name="syspad_test_database",
             username="root",
             host="db",
             port=3306,
@@ -28,7 +28,7 @@ def add_database(env_name: str):
     new_database = Database(
         user_id=2,
         valid_database_id=1,
-        name="test_frida_db2",
+        name="syspad_test_database_2",
         username="root",
         host="localhost",
         port=3306,
@@ -39,7 +39,7 @@ def add_database(env_name: str):
     new_database = Database(
         user_id=2,
         valid_database_id=1,
-        name="test_frida_db3",
+        name="syspad_test_database_3",
         username="root",
         host="localhost",
         port=3306,
@@ -50,7 +50,7 @@ def add_database(env_name: str):
     new_database = Database(
         user_id=3,
         valid_database_id=2,
-        name="test_frida_db4",
+        name="syspad_test_database_4",
         username="postgres",
         host="localhost",
         port=3306,
@@ -61,7 +61,7 @@ def add_database(env_name: str):
     new_database = Database(
         user_id=3,
         valid_database_id=2,
-        name="test_frida_db5",
+        name="syspad_test_database_5",
         username="postgres",
         host="localhost",
         port=3306,

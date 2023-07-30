@@ -1,42 +1,31 @@
 from sqlalchemy import func, select, update
 from werkzeug.datastructures import ImmutableMultiDict
 
-from app.main.exceptions import DefaultException, ValidationException
+from app.main.exceptions import DefaultException
 from app.main.model import User
-from app.main.service.anonymization_service import anonymization_database_rows
-from app.main.service.database_service import get_database
-from app.main.service.encryption_service import decrypt_row, encrypt_database_row
-from app.main.service.global_service import (
-    create_table_connection,
-    get_cloud_database_url,
-    get_primary_key_name,
-)
-from app.main.service.sql_log_service import updates_log
-from app.main.service.sse_service import generate_hash_rows
-from app.main.service.table_service import get_sensitive_columns
 
 
 def show_rows_hash(
-    params: ImmutableMultiDict, database_id: int, current_user: User
-) -> tuple:
-    table_name = params.get("table_name", type=str)
+    database_id: int, table_id: int, params: ImmutableMultiDict, current_user: User
+) -> dict[str, any]:
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
     page = params.get("page", type=int)
     per_page = params.get("per_page", type=int)
-
-    get_database(database_id=database_id, current_user=current_user)
 
     # Get cloud database url
     cloud_database_url = get_cloud_database_url(database_id=database_id)
 
-    # Get primary key name in table object
+    # Get primary key name
     primary_key_name = get_primary_key_name(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_name=table.name
     )
 
     # Create cloud table connection
     cloud_table_connection = create_table_connection(
         database_url=cloud_database_url,
-        table_name=table_name,
+        table_name=table.name,
         columns_list=[primary_key_name, "line_hash"],
     )
 
@@ -75,26 +64,27 @@ def show_rows_hash(
 
 
 def process_inserts(
-    database_id: int, data: dict[str, str], current_user: User
-) -> tuple:
-    table_name = data.get("table_name")
+    database_id: int, table_id: int, data: dict[str, str], current_user: User
+) -> None:
     hash_rows = data.get("hash_rows")
 
-    get_database(database_id=database_id, current_user=current_user)
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
 
     # Get Cloud Database Url
     cloud_database_url = get_cloud_database_url(database_id=database_id)
 
+    # Get primary key column name
+    primary_key_name = get_primary_key_name(
+        database_id=database_id, table_name=table.name
+    )
+
     # Create cloud table connection
     cloud_table_connection = create_table_connection(
         database_url=cloud_database_url,
-        table_name=table_name,
+        table_name=table.name,
         columns_list=[primary_key_name, "line_hash"],
-    )
-
-    # Get primary key column name
-    primary_key_name = get_primary_key_name(
-        database_id=database_id, table_name=table_name
     )
 
     try:
@@ -111,15 +101,25 @@ def process_inserts(
             cloud_table_connection.session.execute(statement)
 
         cloud_table_connection.session.commit()
+
     except:
-        cloud_table_connection.session.rollback()
+        if cloud_table_connection is not None:
+            cloud_table_connection.session.rollback()
+
         raise DefaultException("inserts_not_processed", code=500)
+
     finally:
-        cloud_table_connection.close()
+        if cloud_table_connection is not None:
+            cloud_table_connection.close()
 
 
-def process_updates(database_id: int, data: dict[str, str], current_user: User) -> None:
-    table_name = data.get("table_name")
+def process_updates(
+    database_id: int, table_id: int, data: dict[str, str], current_user: User
+) -> None:
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
+
     primary_key_list = data.get("primary_key_list")
 
     # Get client database
@@ -128,46 +128,43 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
     # Create client table connection
     client_table_connection = create_table_connection(
         database_url=client_database.url,
-        table_name=table_name,
+        table_name=table.name,
     )
 
     # Get primary key column name
     primary_key_name = get_primary_key_name(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_name=table.name
     )
 
-    # Get sensitive columns of Client Datget_sensitive_columnsabase
+    # Get sensitive columns of Client Database
     sensitive_columns = get_sensitive_columns(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_id=table.id
     )["sensitive_column_names"]
 
     try:
         # Get original rows ​​that have been updated
         rows_list = []
-
         update_log = {}
 
         for primary_key_value in primary_key_list:
             update_log["primary_key_value"] = primary_key_value
+
             found_row = decrypt_row(
                 database_id=database_id,
+                table_id=table_id,
                 data={
-                    "table_name": table_name,
                     "search_type": "primary_key",
                     "search_value": primary_key_value,
                 },
             )
 
-            print(f"Cheguei5 = {found_row}")
-
             found_row = found_row
-            print(f"\nfound_row -->> {found_row}\n")
 
             anonymized_row = found_row.copy()
             anonymized_row = anonymization_database_rows(
                 database_id=database_id,
+                table_id=table_id,
                 data={
-                    "table_name": table_name,
                     "rows_to_anonymization": [anonymized_row],
                     "insert_database": False,
                 },
@@ -175,20 +172,17 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
             )["rows_anonymized"]
             anonymized_row = anonymized_row[0]
 
-            stmt = select(client_table_connection.table).where(
+            statement = select(client_table_connection.table).where(
                 client_table_connection.get_column(column_name=primary_key_name)
                 == primary_key_value
             )
-            client_row = client_table_connection.session.execute(stmt)
+            client_row = client_table_connection.session.execute(statement)
             client_row = [row._asdict() for row in client_row][0]
-            print(f"\nclient_row -->> {client_row}\n")
-            print(f"\nanonymized_row -->> {anonymized_row}\n")
 
             update_log["columns"] = []
             update_log["values"] = []
             for sensitive_column in sensitive_columns:
                 if type(client_row[sensitive_column]).__name__ == "date":
-                    print("entrei1")
                     if anonymized_row[sensitive_column] != client_row[
                         sensitive_column
                     ].strftime("%Y-%m-%d"):
@@ -197,74 +191,88 @@ def process_updates(database_id: int, data: dict[str, str], current_user: User) 
                         update_log["values"].append(
                             client_row[sensitive_column].strftime("%Y-%m-%d")
                         )
-                        print(f"###TROCOU### -> {sensitive_column}")
 
                 else:
-                    print("entrei2")
                     if anonymized_row[sensitive_column] != client_row[sensitive_column]:
                         found_row[sensitive_column] = client_row[sensitive_column]
                         update_log["columns"].append(sensitive_column)
                         update_log["values"].append(client_row[sensitive_column])
-                        print(f"###TROCOU### -> {sensitive_column}")
 
             rows_list.append(found_row)
 
-            updates_log(database_id=database_id, table_name=table_name, data=update_log)
+            updates_log(database_id=database_id, table_name=table.name, data=update_log)
+
+        client_table_connection.session.commit()
 
         encrypt_database_row(
             database_id=database_id,
+            table_id=table_id,
             data={
-                "table_name": table_name,
+                "table_name": table.name,
                 "rows_to_encrypt": rows_list.copy(),
                 "update_database": True,
             },
             current_user=current_user,
         )
+        client_table_connection.session.commit()
 
         anonymized_rows = anonymization_database_rows(
             database_id=database_id,
+            table_id=table_id,
             data={
-                "table_name": table_name,
+                "table_name": table.name,
                 "rows_to_anonymization": rows_list.copy(),
                 "insert_database": True,
             },
             current_user=current_user,
         )["rows_anonymized"]
+        client_table_connection.session.commit()
 
-        print(f"\nanonymized_rows -->> {anonymized_rows}\n")
-
-        generate_hash_rows(
+        cloud_table_connection = generate_hash_rows(
             database_id=database_id,
-            table_name=table_name,
+            table_id=table.id,
             result_query=anonymized_rows,
             current_user=current_user,
         )
+        cloud_table_connection.session.commit()
+
     except:
-        client_table_connection.session.rollback()
+        if client_table_connection is not None:
+            client_table_connection.session.rollback()
+
+        if cloud_table_connection is not None:
+            cloud_table_connection.session.rollback()
+
         raise DefaultException("updates_not_processed", code=500)
+
     finally:
-        client_table_connection.close()
+        if client_table_connection is not None:
+            client_table_connection.close()
+
+        if cloud_table_connection is not None:
+            cloud_table_connection.close()
 
 
 def process_deletions(
-    database_id: int, data: dict[str, str], current_user: User
+    database_id: int, table_id: int, data: dict[str, str], current_user: User
 ) -> None:
-    table_name = data.get("table_name")
-    primary_key_list = data.get("primary_key_list")
+    table = get_table(
+        database_id=database_id, table_id=table_id, current_user=current_user
+    )
 
-    get_database(database_id=database_id, current_user=current_user)
+    primary_key_list = data.get("primary_key_list")
 
     # Get database information by id
     cloud_database_url = get_cloud_database_url(database_id=database_id)
 
     # Create cloud table connection
     cloud_table_connection = create_table_connection(
-        database_url=cloud_database_url, table_name=table_name
+        database_url=cloud_database_url, table_name=table.name
     )
 
     # Get primary key column name
     primary_key_name = get_primary_key_name(
-        database_id=database_id, table_name=table_name
+        database_id=database_id, table_name=table.name
     )
 
     try:
@@ -273,8 +281,28 @@ def process_deletions(
                 cloud_table_connection.get_column(column_name=primary_key_name)
                 == primary_key_value
             ).delete()
+
+            cloud_table_connection.session.commit()
+
     except:
-        cloud_table_connection.session.rollback()
+        if cloud_table_connection is not None:
+            cloud_table_connection.session.rollback()
+
         raise DefaultException("deletes_not_processed", code=500)
+
     finally:
-        cloud_table_connection.close()
+        if cloud_table_connection is not None:
+            cloud_table_connection.close()
+
+
+from app.main.service.anonymization_service import anonymization_database_rows
+from app.main.service.database_service import get_database
+from app.main.service.encryption_service import decrypt_row, encrypt_database_row
+from app.main.service.global_service import (
+    create_table_connection,
+    get_cloud_database_url,
+    get_primary_key_name,
+)
+from app.main.service.sql_log_service import updates_log
+from app.main.service.sse_service import generate_hash_rows
+from app.main.service.table_service import get_sensitive_columns, get_table

@@ -12,6 +12,7 @@ from app.main.service import (
 )
 from app.main.util import DefaultResponsesDTO
 from app.main.util.sql_log_dto import SqlLogDTO
+from app.main.model import User
 
 sql_log_ns = SqlLogDTO.api
 api = sql_log_ns
@@ -28,7 +29,7 @@ _CONTENT_PER_PAGE = Config.CONTENT_PER_PAGE
 _DEFAULT_CONTENT_PER_PAGE = Config.DEFAULT_CONTENT_PER_PAGE
 
 
-@api.route("")
+@api.route("/database/<int:database_id>")
 class SqlLog(Resource):
     @api.doc(
         "List all registered sql logs",
@@ -40,27 +41,28 @@ class SqlLog(Resource):
                 "enum": _CONTENT_PER_PAGE,
                 "type": int,
             },
-            "database_id": {"description": "Database id", "type": int},
             "sql_command": {"description": "SQL command", "type": str},
         },
         description=f"List all registered sql logs with pagination. {_DEFAULT_CONTENT_PER_PAGE} sql logs per page.",
     )
     @api.marshal_with(_sql_log_list, code=200, description="_sql_log_list")
     @token_required()
-    def get(self, current_user):
+    def get(self, database_id: int, current_user: User):
         """List all registered sql logs"""
         params = request.args
-        return get_sql_logs(params=params, current_user=current_user)
+        return get_sql_logs(
+            database_id=database_id, params=params, current_user=current_user
+        )
 
     @api.doc("Create a new sql log")
     @api.expect(_sql_log_post, validate=True)
     @api.response(201, "sql_log_created", _default_message_response)
     @api.response(400, "Input payload validation failed", _validation_error_response)
     @token_required()
-    def post(self, current_user) -> tuple[dict[str, str], int]:
+    def post(self, database_id: int, current_user: User) -> tuple[dict[str, str], int]:
         """Create a new sql log"""
         data = request.json
-        save_new_sql_log(data=data, current_user=current_user)
+        save_new_sql_log(database_id=database_id, data=data, current_user=current_user)
         return {"message": "sql_log_created"}, 201
 
 

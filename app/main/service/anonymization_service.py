@@ -86,14 +86,17 @@ def anonymization_database_rows(
                     insert_database=insert_database,\
                     )"
             )
+
+        client_table_connection.session.commit()
+
+        return {"rows_anonymized": rows_to_anonymization}
+
     except:
         client_table_connection.session.rollback()
         raise DefaultException("database_rows_not_anonymized", code=500)
 
     finally:
         client_table_connection.close()
-
-    return {"rows_anonymized": rows_to_anonymization}
 
 
 def anonymization_table(database_id: int, table_id: int, current_user: User) -> int:
@@ -143,7 +146,8 @@ def anonymization_table(database_id: int, table_id: int, current_user: User) -> 
             )
             db.session.commit()
 
-        table.anonymization_progress = 50
+        table.anonimyzation_progress = 50
+        client_table_connection.session.commit()
         db.session.commit()
 
         cloud_table_connection = generate_hash_column(
@@ -157,14 +161,23 @@ def anonymization_table(database_id: int, table_id: int, current_user: User) -> 
         table.anonymization_progress = 100
 
     except:
-        client_table_connection.session.rollback()
-        cloud_table_connection.session.rollback()
+        if client_table_connection is not None:
+            client_table_connection.session.rollback()
+
+        if cloud_table_connection is not None:
+            cloud_table_connection.session.rollback()
+
         table.anonymization_progress = 0
+
         raise DefaultException("table_not_anonymized", code=500)
 
     finally:
-        client_table_connection.close()
-        cloud_table_connection.close()
+        if client_table_connection is not None:
+            client_table_connection.close()
+
+        if cloud_table_connection is not None:
+            cloud_table_connection.close()
+
         db.session.commit()
 
 
@@ -263,13 +276,19 @@ def remove_table_anonymizaiton(
     except:
         table.encryption_progress = 100
         table.anonymization_progress = 100
-        client_table_connection.session.rollback()
+
+        if client_table_connection is not None:
+            client_table_connection.session.rollback()
+
         db.session.rollback()
+
         raise DefaultException("anonymization_not_removed", code=500)
 
     finally:
         db.session.commit()
-        client_table_connection.close()
+
+        if client_table_connection is not None:
+            client_table_connection.close()
 
 
 def get_anonymization_progress(

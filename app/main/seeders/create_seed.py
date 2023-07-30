@@ -6,7 +6,7 @@ from app.main.seeders import (
     add_sql_logs,
     add_tables,
     add_user,
-    create_test_frida_db,
+    create_test_database,
 )
 
 
@@ -22,22 +22,22 @@ def create_seed(env_name: str):
         add_anonymization_records()
 
         try:
-            create_test_frida_db(
+            create_test_database(
                 USER="root",
                 DB_PW="larces132",
                 HOST="localhost",
-                DB_NAME="test_frida_db",
+                DB_NAME="syspad_test_database",
             )
         except:
             print("==== Log Flask Command: create_db ====")
             print("Teste database not created")
     else:
         try:
-            create_test_frida_db(
+            create_test_database(
                 USER="root",
                 DB_PW="",
                 HOST="db",
-                DB_NAME="test_frida_db",
+                DB_NAME="syspad_test_database",
             )
         except:
             print("==== Log Flask Command: create_db ====")

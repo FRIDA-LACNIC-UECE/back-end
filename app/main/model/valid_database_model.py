@@ -9,6 +9,7 @@ class ValidDatabase(db.Model):
     id = db.Column(db.Integer, nullable=False, autoincrement=True, primary_key=True)
 
     name = db.Column(db.String(255), nullable=False, unique=True)
+    dialect = db.Column(db.String(255), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(db.DateTime, onupdate=func.now())
 

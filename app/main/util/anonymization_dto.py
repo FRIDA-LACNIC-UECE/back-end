@@ -4,7 +4,7 @@ from app.main.util.custom_field import Dictionary
 
 
 class AnonymizationDTO:
-    api = Namespace("anonymization", description="Anonymization operations")
+    api = Namespace("anonymization", description="Anonymization related operations")
 
     anonymization_rows_to_anonymization = {
         "rows_to_anonymization": fields.List(

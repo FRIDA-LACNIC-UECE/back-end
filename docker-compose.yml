@@ -3,34 +3,34 @@ version: '3.8'
 services:
   db:
     build: ./db
-    image: db-frida
+    image: db-syspad
     container_name: db-container
     ports:
       - "3307:3306"
     env_file:
       - ./db/db.env
     volumes:
-      - frida-database:/var/lib/mysql
+      - syspad-database:/var/lib/mysql
     networks:
-      - frida-network
+      - syspad-network
     restart: always
 
   api:
     build: "./"
-    image: api-frida
+    image: api-syspad
     container_name: api-container
     ports:
       - "5000:5000"
     env_file:
-      - ./app.env
+      - ./app/app.env
     networks:
-      - frida-network
+      - syspad-network
     restart: always
     depends_on:
       - db
 
 volumes:
-  frida-database: {}
+  syspad-database: {}
 
 networks:
-  frida-network:
+  syspad-network:
